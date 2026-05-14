@@ -9,12 +9,13 @@ STRC Sim is a **Bitcoin Treasury Valuation System** that models and values SATA 
 ## Environment Setup
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Use a **single** local virtualenv at `venv/` (do not maintain a parallel `.venv/` — it duplicates hundreds of MB and divergent package sets). Matplotlib is configured for headless operation (`Agg` backend) — do not attempt to display plots interactively.
+Use a **single** local virtualenv at `venv/` (do not maintain a parallel `.venv/` — it duplicates hundreds of MB and divergent package sets). In Cursor/VS Code, select **`…/STRC Sim/venv/bin/python`** so tests and notebooks use this environment. Matplotlib is configured for headless operation (`Agg` backend) — do not attempt to display plots interactively.
 
 ## Pipeline: How to Run
 
@@ -58,13 +59,13 @@ fetch_treasury_api.py
 btc_price_paths.py
     → output/btc_price_paths_scenarios_price_paths.npy   (~1GB uncompressed)
     → output/btc_price_paths_scenarios_metadata.npz
-    → output/plots/*.png
+    → output/plots/*.png  (default charts; see also output/plots/matrix/, output/plots/perf/)
 
 sata_valuation.py
     → reads treasury + price path files from output/
     → runs parallel Monte Carlo simulations (ProcessPoolExecutor)
     → output/sata_valuation_results.json
-    → output/plots/*.png
+    → output/plots/*.png  (same layout: optional matrix/ and perf/ subfolders)
 
 html_report_generator.py
     → reports/sata_valuation_report.html (charts embedded as base64)
@@ -92,6 +93,10 @@ The inner simulation loop (`simulate_dividend_path`) is JIT-compiled with Numba 
 
 This split avoids decompression overhead on the large array at valuation time.
 
+### Plot outputs
+
+All raster charts belong under **`output/plots/`**. Defaults from `btc_price_paths.py` and `sata_valuation.py` land in that directory root. Use **`output/plots/matrix/`** for matrix-style figures and **`output/plots/perf/`** for performance / benchmark runs (`PLOTS_MATRIX_DIR` and `PLOTS_PERF_DIR` in `strc_paths.py`). Do not create new top-level `matrix_plots/` or `perf_plots/` folders.
+
 ### Dividend Suspension Logic
 
 Each monthly simulation step:
@@ -106,7 +111,7 @@ The suspension threshold multiplier is the key sensitivity parameter — tested 
 
 | File | Purpose |
 |------|---------|
-| `strc_paths.py` | Default `output/`, `output/plots/`, and `reports/` path constants |
+| `strc_paths.py` | `PROJECT_ROOT`, `OUTPUT_DIR`, `REPORTS_DIR`, `PLOTS_DIR`, `PLOTS_MATRIX_DIR`, `PLOTS_PERF_DIR`, `ensure_output_dirs()` |
 | `sata_valuation.py` | Main engine: Configuration class, simulation logic, all four analyses |
 | `btc_price_paths.py` | Monte Carlo BTC price generation with manually tunable distribution parameters |
 | `html_report_generator.py` | Reads results JSON, produces self-contained HTML report under `reports/` |

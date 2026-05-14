@@ -1,4 +1,11 @@
-"""Shared project paths for generated artifacts (flat output/ + reports/)."""
+"""Shared project paths for generated artifacts (flat output/ + reports/).
+
+All PNG outputs should live under ``output/plots/``. Use subfolders for grouping:
+
+- ``output/plots/matrix/`` — matrix-style / grid charts
+- ``output/plots/perf/`` — performance / timing / benchmark charts
+- ``output/plots/`` root — default charts from ``btc_price_paths.py`` and ``sata_valuation.py``
+"""
 
 from pathlib import Path
 
@@ -6,10 +13,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = PROJECT_ROOT / "output"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 PLOTS_DIR = OUTPUT_DIR / "plots"
+PLOTS_MATRIX_DIR = PLOTS_DIR / "matrix"
+PLOTS_PERF_DIR = PLOTS_DIR / "perf"
 
 
 def ensure_output_dirs() -> None:
-    """Create output/, reports/, and output/plots/ if missing."""
+    """Create output/, reports/, and output/plots/ (+ matrix/perf) if missing."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    PLOTS_MATRIX_DIR.mkdir(parents=True, exist_ok=True)
+    PLOTS_PERF_DIR.mkdir(parents=True, exist_ok=True)
