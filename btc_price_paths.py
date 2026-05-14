@@ -40,9 +40,7 @@ NUM_SIMULATIONS = 10000          # Number of Monte Carlo simulation runs
 SIMULATION_YEARS = 100            # Projection period in years
 MEAN_CAGR = 0.0                   # Mean Compound Annual Growth Rate (Bitcoin trends to zero)
 
-# Output Configuration
-OUTPUT_DIR = "plots"              # Directory for saving charts
-OUTPUT_FILE_NPZ = "btc_price_paths_scenarios.npz"  # Output file for price paths
+# Output paths are resolved in main() from strc_paths and CLI (see argparse there).
 
 # ============================================================================
 # IMPORT LIBRARIES
@@ -394,10 +392,43 @@ def create_side_by_side_comparison(btc_returns, bin_min, bin_max, n_bins_count, 
 
 def main():
     """Main execution function."""
-    
+    import argparse
+    from pathlib import Path
+
+    from strc_paths import OUTPUT_DIR as DEFAULT_ARTIFACT_DIR, PLOTS_DIR as DEFAULT_PLOTS_DIR, ensure_output_dirs
+
+    parser = argparse.ArgumentParser(description="Generate Monte Carlo BTC price paths")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=f"Directory for npy/npz (default: {DEFAULT_ARTIFACT_DIR})",
+    )
+    parser.add_argument(
+        "--plots-dir",
+        type=Path,
+        default=None,
+        help=f"Directory for chart PNGs (default: {DEFAULT_PLOTS_DIR})",
+    )
+    parser.add_argument(
+        "--historical-json",
+        type=Path,
+        default=None,
+        help="Path to btc_historical_data.json (default: <output-dir>/btc_historical_data.json)",
+    )
+    args = parser.parse_args()
+
+    artifact_dir = args.output_dir or DEFAULT_ARTIFACT_DIR
+    plots_dir = args.plots_dir or DEFAULT_PLOTS_DIR
+    historical_json = args.historical_json or (artifact_dir / "btc_historical_data.json")
+
+    ensure_output_dirs()
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+
     # Create output directory for plots
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"Output directory: {OUTPUT_DIR}/")
+    print(f"Artifact directory: {artifact_dir}/")
+    print(f"Charts directory: {plots_dir}/")
     
     # Print configuration
     print("\n" + "=" * 70)
@@ -433,7 +464,13 @@ def main():
     print("Loading historical Bitcoin data from btc_historical_data.json...")
 
     # Load BTC historical data from JSON
-    json_file = 'btc_historical_data.json'
+    json_file = str(historical_json)
+    if not os.path.isfile(json_file):
+        legacy = "btc_historical_data.json"
+        if os.path.isfile(legacy):
+            print(f"  Using legacy path for historical data: {legacy}")
+            json_file = legacy
+
     try:
         with open(json_file, 'r') as f:
             btc_json_data = json.load(f)
@@ -712,7 +749,7 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.yscale('log')
     
-    output_path = os.path.join(OUTPUT_DIR, 'baseline_scenario_paths.png')
+    output_path = os.path.join(plots_dir, 'baseline_scenario_paths.png')
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"  ✓ Saved: {output_path}")
@@ -747,7 +784,7 @@ def main():
     plt.grid(True, alpha=0.3)
     plt.ylim(0, 1000000)  # Linear scale from 0 to 1 million
 
-    output_path_10y = os.path.join(OUTPUT_DIR, 'baseline_scenario_paths_10years_linear.png')
+    output_path_10y = os.path.join(plots_dir, 'baseline_scenario_paths_10years_linear.png')
     plt.savefig(output_path_10y, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"  ✓ Saved: {output_path_10y}")
@@ -764,8 +801,9 @@ def main():
     export_start = time.time()
     
     # Prepare file paths
-    price_paths_file = OUTPUT_FILE_NPZ.replace('.npz', '_price_paths.npy')
-    metadata_file = OUTPUT_FILE_NPZ.replace('.npz', '_metadata.npz')
+    _stem = "btc_price_paths_scenarios"
+    price_paths_file = str(artifact_dir / f"{_stem}_price_paths.npy")
+    metadata_file = str(artifact_dir / f"{_stem}_metadata.npz")
     
     # Pre-convert arrays in parallel using ThreadPoolExecutor (I/O-bound operations)
     from concurrent.futures import ThreadPoolExecutor
@@ -923,7 +961,7 @@ def main():
     ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    output_path = os.path.join(OUTPUT_DIR, 'distribution_comparison.png')
+    output_path = os.path.join(plots_dir, 'distribution_comparison.png')
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"  ✓ Saved: {output_path}")
@@ -936,10 +974,10 @@ def main():
     }
     
     print("\nGenerating side-by-side comparison with 25 bins...")
-    create_side_by_side_comparison(btc_returns, bin_min, bin_max, 25, dist_params, OUTPUT_DIR)
+    create_side_by_side_comparison(btc_returns, bin_min, bin_max, 25, dist_params, str(plots_dir))
     
     print("\nGenerating side-by-side comparison with 10 bins...")
-    create_side_by_side_comparison(btc_returns, bin_min, bin_max, 10, dist_params, OUTPUT_DIR)
+    create_side_by_side_comparison(btc_returns, bin_min, bin_max, 10, dist_params, str(plots_dir))
     
     # Calculate and print statistics
     x_fine = np.linspace(bin_min, bin_max, 1000)
@@ -985,7 +1023,7 @@ def main():
     print(f"Output files:")
     print(f"  - Price paths: {price_paths_file}")
     print(f"  - Metadata: {metadata_file}")
-    print(f"  - Charts saved to: {OUTPUT_DIR}/")
+    print(f"  - Charts saved to: {plots_dir}/")
     print(f"{'='*70}")
 
 

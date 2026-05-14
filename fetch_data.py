@@ -9,19 +9,21 @@ This script fetches:
 - BTCC treasury data (Bitcoin holdings, cash, SATA preferred stock data) from treasury.strive.com
 - BTC historical price data and monthly returns
 - U.S. Treasury discount curve (FRED DGS yields + bootstrap) to yield_curve.json
-- Saves data to mstr_data.json, mstr_options.json, ibit_data.json, ibit_options.json, btcc_data.json, btc_historical_data.json, and yield_curve.json
+- Saves JSON files under `output/` by default (override with `--output-dir`): mstr_data.json, mstr_options.json, ibit_data.json, ibit_options.json, btc_historical_data.json, and yield_curve.json
 """
 
+import argparse
 import json
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
-import os
+from pathlib import Path
 import requests
 import re
 import numpy as np
 
 from treasury_zero_curve import build_treasury_zero_curve
+from strc_paths import OUTPUT_DIR, ensure_output_dirs
 
 # Constants
 BTC_PER_SHARE = 22.69 / 40000  # BTC per IBIT share ratio
@@ -92,7 +94,7 @@ def fetch_options_chain(ticker, ticker_name):
     
     return options_data, expirations
 
-def fetch_mstr_data():
+def fetch_mstr_data(output_dir: Path):
     """Fetch MSTR stock price and options data"""
     
     print("\n" + "="*70)
@@ -133,20 +135,20 @@ def fetch_mstr_data():
     print("\n3. Saving MSTR data to files...")
     
     # Save main data file
-    data_file = 'mstr_data.json'
+    data_file = output_dir / 'mstr_data.json'
     with open(data_file, 'w') as f:
         json.dump(output_data, f, indent=2)
     print(f"   ✓ Saved to {data_file}")
     
     # Save options data separately (larger file)
-    options_file = 'mstr_options.json'
+    options_file = output_dir / 'mstr_options.json'
     with open(options_file, 'w') as f:
         json.dump(options_data, f, indent=2)
     print(f"   ✓ Saved to {options_file}")
     
     return output_data
 
-def fetch_ibit_data():
+def fetch_ibit_data(output_dir: Path):
     """Fetch IBIT stock price and options data"""
     
     print("\n" + "="*70)
@@ -213,13 +215,13 @@ def fetch_ibit_data():
     print("\n4. Saving IBIT data to files...")
     
     # Save main data file
-    data_file = 'ibit_data.json'
+    data_file = output_dir / 'ibit_data.json'
     with open(data_file, 'w') as f:
         json.dump(output_data, f, indent=2)
     print(f"   ✓ Saved to {data_file}")
     
     # Save options data separately (larger file)
-    options_file = 'ibit_options.json'
+    options_file = output_dir / 'ibit_options.json'
     with open(options_file, 'w') as f:
         json.dump(options_data, f, indent=2)
     print(f"   ✓ Saved to {options_file}")
@@ -227,7 +229,7 @@ def fetch_ibit_data():
     return output_data
 
 
-def fetch_treasury_yield_curve(output_path: str = "yield_curve.json") -> dict | None:
+def fetch_treasury_yield_curve(output_path: str | Path = "yield_curve.json") -> dict | None:
     """
     Fetch FRED constant-maturity Treasury yields and bootstrap discount factors;
     save to yield_curve.json for ibit_option_deltas.py and notebooks.
@@ -239,17 +241,19 @@ def fetch_treasury_yield_curve(output_path: str = "yield_curve.json") -> dict | 
         curve = build_treasury_zero_curve(session=requests.Session())
         payload = {"timestamp": datetime.now().isoformat()}
         payload.update(curve.to_json_dict())
-        with open(output_path, "w") as f:
+        outp = Path(output_path)
+        outp.parent.mkdir(parents=True, exist_ok=True)
+        with open(outp, "w") as f:
             json.dump(payload, f, indent=2)
         print(f"\n   ✓ FRED observation as-of: {curve.as_of_date}")
-        print(f"   ✓ Saved to {output_path}")
+        print(f"   ✓ Saved to {outp}")
         return payload
     except Exception as e:
         print(f"\n   ✗ Could not build/save yield curve: {e}")
         return None
 
 
-def fetch_btc_historical_data(historical_period='max'):
+def fetch_btc_historical_data(historical_period='max', output_dir: Path | None = None):
     """Fetch BTC historical price data and calculate monthly returns"""
 
     print("\n" + "="*70)
@@ -297,32 +301,37 @@ def fetch_btc_historical_data(historical_period='max'):
 
     # Save to JSON file
     print("\nSaving BTC historical data to file...")
-    data_file = 'btc_historical_data.json'
+    out = output_dir or OUTPUT_DIR
+    out.mkdir(parents=True, exist_ok=True)
+    data_file = out / 'btc_historical_data.json'
     with open(data_file, 'w') as f:
         json.dump(output_data, f, indent=2)
     print(f"   ✓ Saved to {data_file}")
 
     return output_data
 
-def fetch_all_data():
+def fetch_all_data(output_dir: Path | None = None):
     """Fetch all data (MSTR, IBIT, and BTCC)"""
-    
+    out = Path(output_dir) if output_dir is not None else OUTPUT_DIR
+    out.mkdir(parents=True, exist_ok=True)
+
     print("="*70)
     print("FETCHING MARKET DATA")
     print("="*70)
+    print(f"\nOutput directory: {out}")
     print(f"\nBTC_PER_SHARE constant: {BTC_PER_SHARE:.6f}")
     print(f"(Calculated as: 22.69 / 40000)")
     
     # Fetch MSTR data
-    mstr_data = fetch_mstr_data()
+    mstr_data = fetch_mstr_data(out)
     
     # Fetch IBIT data
-    ibit_data = fetch_ibit_data()
+    ibit_data = fetch_ibit_data(out)
     
     # Fetch BTC historical data
-    btc_data = fetch_btc_historical_data()
+    btc_data = fetch_btc_historical_data(output_dir=out)
 
-    fetch_treasury_yield_curve()
+    fetch_treasury_yield_curve(out / "yield_curve.json")
 
     # Print summary
     print("\n" + "="*70)
@@ -346,7 +355,7 @@ def fetch_all_data():
     print(f"  Daily Observations: {btc_data['daily_observations']:,}")
     print(f"  Monthly Observations: {btc_data['monthly_observations']:,}")
 
-    print(f"\nData Files:")
+    print(f"\nData Files (under {out}):")
     print(f"  - mstr_data.json")
     print(f"  - mstr_options.json")
     print(f"  - ibit_data.json")
@@ -358,5 +367,14 @@ def fetch_all_data():
     return mstr_data, ibit_data
 
 if __name__ == "__main__":
-    fetch_all_data()
+    parser = argparse.ArgumentParser(description="Fetch market data for STRC Sim")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help=f"Directory for JSON outputs (default: {OUTPUT_DIR})",
+    )
+    args = parser.parse_args()
+    ensure_output_dirs()
+    fetch_all_data(args.output_dir if args.output_dir is not None else OUTPUT_DIR)
 

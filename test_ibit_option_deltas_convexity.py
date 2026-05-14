@@ -17,10 +17,12 @@ ROOT = Path(__file__).resolve().parent
 
 
 def _load_ibit_data():
-    p = ROOT / "ibit_data.json"
-    if not p.is_file():
-        return None
-    return json.loads(p.read_text())
+    from strc_paths import OUTPUT_DIR
+
+    for p in (OUTPUT_DIR / "ibit_data.json", ROOT / "ibit_data.json"):
+        if p.is_file():
+            return json.loads(p.read_text())
+    return None
 
 
 class TestIbitOptionDeltasConvexity(unittest.TestCase):

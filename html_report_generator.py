@@ -9,9 +9,12 @@ import json
 import argparse
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Any
 import pandas as pd
 import numpy as np
+
+from strc_paths import OUTPUT_DIR as DEFAULT_OUTPUT_DIR, REPORTS_DIR, ensure_output_dirs
 
 # ============================================================================
 # HTML REPORT GENERATION
@@ -512,12 +515,20 @@ def load_results_from_json(json_file: str) -> Dict[str, Any]:
 def main():
     """Generate HTML report from JSON results."""
     parser = argparse.ArgumentParser(description='Generate HTML report from SATA valuation JSON results')
-    parser.add_argument('--input', '-i', default='sata_valuation_results.json',
-                       help='Input JSON results file from sata_valuation.py (default: sata_valuation_results.json)')
-    parser.add_argument('--output', '-o', default='sata_valuation_report.html',
-                       help='Output HTML report file (default: sata_valuation_report.html)')
+    parser.add_argument('--input', '-i', default=str(DEFAULT_OUTPUT_DIR / 'sata_valuation_results.json'),
+                       help=f'Input JSON results file from sata_valuation.py (default: {DEFAULT_OUTPUT_DIR / "sata_valuation_results.json"})')
+    parser.add_argument('--output', '-o', default=str(REPORTS_DIR / 'sata_valuation_report.html'),
+                       help=f'Output HTML report file (default: {REPORTS_DIR / "sata_valuation_report.html"})')
 
     args = parser.parse_args()
+
+    ensure_output_dirs()
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+
+    if not os.path.exists(args.input):
+        legacy = "sata_valuation_results.json"
+        if os.path.isfile(legacy):
+            args.input = legacy
 
     # Validate input file exists
     if not os.path.exists(args.input):

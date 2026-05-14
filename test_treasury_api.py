@@ -3,11 +3,16 @@
 Fetch data from treasury.strive.com using the actual API endpoints found in the JavaScript
 """
 
-import requests
+import argparse
 import json
+import requests
 from datetime import datetime
+from pathlib import Path
 
-def fetch_treasury_data():
+from strc_paths import OUTPUT_DIR, ensure_output_dirs
+
+
+def fetch_treasury_data(output_path: Path | None = None):
     """Fetch data using the actual API endpoints"""
     
     print("="*70)
@@ -63,7 +68,7 @@ def fetch_treasury_data():
                 print(f"   ✗ ASST not found in companies. Available: {list(companies.keys())[:10]}")
                 return None
             
-            return extract_and_display_data(asst, data)
+            return extract_and_display_data(asst, data, output_path=output_path)
         else:
             print(f"   ✗ Failed: {response.status_code}")
             print(f"   Response: {response.text[:200]}")
@@ -75,7 +80,7 @@ def fetch_treasury_data():
         return None
 
 
-def extract_and_display_data(asst, full_data):
+def extract_and_display_data(asst, full_data, output_path: Path | None = None):
     """Extract and display all the target data"""
     
     print("\n" + "="*70)
@@ -202,9 +207,12 @@ def extract_and_display_data(asst, full_data):
     print(f"\n" + "="*70)
     print("SAVING DATA")
     print("="*70)
-    with open('treasury_extracted_data.json', 'w') as f:
+    out = output_path if output_path is not None else OUTPUT_DIR / "treasury_extracted_data.json"
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, 'w') as f:
         json.dump(extracted, f, indent=2)
-    print(f"✓ Saved to treasury_extracted_data.json")
+    print(f"✓ Saved to {out}")
     
     print(f"\n" + "="*70)
     print("COMPLETE DATA")
@@ -215,8 +223,18 @@ def extract_and_display_data(asst, full_data):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Fetch treasury data from strategytracker API")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=f"Output JSON path (default: {OUTPUT_DIR / 'treasury_extracted_data.json'})",
+    )
+    args = parser.parse_args()
+    ensure_output_dirs()
+    out_path = args.output if args.output is not None else OUTPUT_DIR / "treasury_extracted_data.json"
     try:
-        data = fetch_treasury_data()
+        data = fetch_treasury_data(output_path=out_path)
         if data:
             print("\n✓ Data extraction complete!")
         else:

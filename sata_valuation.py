@@ -23,6 +23,7 @@ import os
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
+from pathlib import Path
 from multiprocessing import cpu_count
 from typing import Dict, List, Optional, Tuple, Any
 from numba import jit
@@ -36,6 +37,8 @@ import matplotlib.pyplot as plt
 
 # Configure matplotlib for non-interactive use
 matplotlib.use('Agg')
+
+from strc_paths import OUTPUT_DIR as DEFAULT_OUTPUT_DIR, PLOTS_DIR as DEFAULT_PLOTS_DIR, REPORTS_DIR, ensure_output_dirs
 
 # Suppress warnings for cleaner output
 import warnings
@@ -296,63 +299,84 @@ def execute_parallel_with_fallback(worker_function: callable, tasks: List[Any],
 # CONFIGURATION LOADING
 # ============================================================================
 
-def load_btcc_data() -> Dict[str, Any]:
+def load_btcc_data(data_dir: Optional[str] = None) -> Dict[str, Any]:
     """Load BTCC treasury data from JSON file.
-    
-    First tries to load from treasury_extracted_data.json (from test_treasury_api.py),
-    then falls back to btcc_data.json, then to defaults.
+
+    First tries ``<data_dir>/treasury_extracted_data.json``, then the legacy
+    cwd file ``treasury_extracted_data.json`` (from test_treasury_api.py).
     """
-    data = {}
-    
-    # First try treasury_extracted_data.json (from test_treasury_api.py)
-    treasury_data_file = 'treasury_extracted_data.json'
-    if os.path.exists(treasury_data_file):
+    data: Dict[str, Any] = {}
+    root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
+
+    candidates = [root / "treasury_extracted_data.json", Path("treasury_extracted_data.json")]
+    for treasury_data_file in candidates:
+        if not treasury_data_file.is_file():
+            continue
         try:
             with open(treasury_data_file, 'r') as f:
                 treasury_data = json.load(f)
             print(f"✓ Loaded treasury data from {treasury_data_file}")
             if 'timestamp' in treasury_data:
                 print(f"  Data timestamp: {treasury_data['timestamp']}")
-            
-            # Map treasury_extracted_data.json fields to expected field names
+
             if 'btc_holdings' in treasury_data:
                 data['bitcoin_holdings'] = treasury_data['btc_holdings']
                 print(f"  BTC Holdings: {data['bitcoin_holdings']:,.2f} BTC")
-            
+
             if 'cash' in treasury_data:
                 data['cash'] = treasury_data['cash']
                 print(f"  Cash: ${data['cash']:,.0f}")
-            
+
             if 'sata_shares' in treasury_data:
                 data['sata_shares'] = treasury_data['sata_shares']
                 print(f"  SATA Shares: {data['sata_shares']:,}")
-            
+
             if 'sata_dividend_rate' in treasury_data:
-                # Convert percentage to decimal if needed
                 dividend_rate = treasury_data['sata_dividend_rate']
                 if dividend_rate > 1:
                     dividend_rate = dividend_rate / 100.0
                 data['sata_dividend_rate'] = dividend_rate
                 print(f"  SATA Dividend Rate: {data['sata_dividend_rate']:.2%}")
-            
+
             if 'sata_price' in treasury_data:
                 data['sata_current_price'] = treasury_data['sata_price']
                 print(f"  SATA Current Price: ${data['sata_current_price']:.2f}")
-            
+
             return data
         except Exception as e:
             print(f"⚠ Error loading {treasury_data_file}: {e}")
-    else:
-        print(f"  Run: python test_treasury_api.py to fetch latest data.")
-        return {}
+            return {}
+
+    print("  Run: python test_treasury_api.py to fetch latest data.")
+    return {}
 
 
-def load_price_paths() -> Dict[str, Any]:
+def load_price_paths(data_dir: Optional[str] = None) -> Dict[str, Any]:
     """Load Bitcoin price paths from optimized split files or JSON."""
-    price_paths_file = "btc_price_paths_scenarios_price_paths.npy"
-    metadata_file = "btc_price_paths_scenarios_metadata.npz"
-    json_file_scenarios = "btc_price_paths_scenarios.json"
-    json_file_old = "btc_price_paths.json"
+    root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
+
+    npy_pairs = [
+        (root / "btc_price_paths_scenarios_price_paths.npy", root / "btc_price_paths_scenarios_metadata.npz"),
+        (Path("btc_price_paths_scenarios_price_paths.npy"), Path("btc_price_paths_scenarios_metadata.npz")),
+    ]
+    price_paths_file = str(npy_pairs[0][0])
+    metadata_file = str(npy_pairs[0][1])
+    for npy, meta in npy_pairs:
+        if npy.is_file() and meta.is_file():
+            price_paths_file, metadata_file = str(npy), str(meta)
+            break
+
+    json_scenarios_candidates = [
+        root / "btc_price_paths_scenarios.json",
+        Path("btc_price_paths_scenarios.json"),
+    ]
+    json_file_scenarios = str(next((p for p in json_scenarios_candidates if p.is_file()), json_scenarios_candidates[0]))
+
+    json_old_candidates = [
+        root / "btc_price_paths.json",
+        Path("btc_price_paths.json"),
+    ]
+    json_file_old = str(next((p for p in json_old_candidates if p.is_file()), json_old_candidates[0]))
     
     use_npz = False
     use_scenarios = False
@@ -1156,13 +1180,13 @@ def setup_configuration_and_data(args) -> Tuple[Configuration, Dict[str, Any], n
     logger.info("="*70)
     logger.info("LOADING CONFIGURATION")
     logger.info("="*70)
-    strive_data = load_btcc_data()
+    strive_data = load_btcc_data(args.data_dir)
 
     # Load price paths
     logger.info("="*70)
     logger.info("LOADING BITCOIN PRICE PATHS")
     logger.info("="*70)
-    price_data = load_price_paths()
+    price_data = load_price_paths(args.data_dir)
 
     # Create configuration with overrides from JSON data
     config = Configuration(**strive_data)
@@ -1466,6 +1490,11 @@ def validate_arguments(args) -> None:
     except (OSError, PermissionError):
         logger.warning(f"Cannot check write access to output directory: {output_dir}")
 
+    try:
+        os.makedirs(args.data_dir, exist_ok=True)
+    except (OSError, PermissionError):
+        logger.warning(f"Cannot create data directory: {args.data_dir}")
+
     # Check if plots directory is writable
     try:
         if not os.access(args.plots_dir, os.W_OK):
@@ -1479,10 +1508,16 @@ def main() -> None:
     start_time = time.time()
 
     parser = argparse.ArgumentParser(description='SATA Preferred Equity Valuation Model')
-    parser.add_argument('--output', type=str, default='sata_valuation_results.json',
-                       help='Output JSON results file path (default: sata_valuation_results.json)')
-    parser.add_argument('--plots-dir', type=str, default='plots',
-                       help='Directory for plot images (default: plots)')
+    parser.add_argument(
+        '--data-dir',
+        type=str,
+        default=str(DEFAULT_OUTPUT_DIR),
+        help=f'Directory for treasury JSON and BTC price path files (default: {DEFAULT_OUTPUT_DIR})',
+    )
+    parser.add_argument('--output', type=str, default=str(DEFAULT_OUTPUT_DIR / 'sata_valuation_results.json'),
+                       help=f'Output JSON results file path (default: {DEFAULT_OUTPUT_DIR / "sata_valuation_results.json"})')
+    parser.add_argument('--plots-dir', type=str, default=str(DEFAULT_PLOTS_DIR),
+                       help=f'Directory for plot images (default: {DEFAULT_PLOTS_DIR})')
     parser.add_argument('--num-workers', type=int, default=None,
                        help='Number of worker processes (default: CPU count)')
     parser.add_argument('--optimization-level', type=int, default=2, choices=[0, 1, 2],
@@ -1491,6 +1526,12 @@ def main() -> None:
                        help='Run only baseline scenario analysis for performance testing')
 
     args = parser.parse_args()
+
+    ensure_output_dirs()
+    os.makedirs(args.data_dir, exist_ok=True)
+    os.makedirs(args.plots_dir, exist_ok=True)
+    out_parent = os.path.dirname(os.path.abspath(args.output)) or '.'
+    os.makedirs(out_parent, exist_ok=True)
 
     # Validate arguments
     validate_arguments(args)
@@ -1590,7 +1631,7 @@ def main() -> None:
         return
 
     # Load price data for scenario analysis
-    price_data = load_price_paths()
+    price_data = load_price_paths(args.data_dir)
     scenarios = price_data['scenarios']
 
     # Run multi-scenario analysis
@@ -1667,7 +1708,7 @@ def main() -> None:
     print(f"\n{'='*70}\nANALYSIS COMPLETE\n{'='*70}")
     print(f"✓ Results saved to: {json_file}")
     print(f"✓ Plots saved to: {args.plots_dir}/")
-    print(f"✓ To generate HTML report: python html_report_generator.py --input {json_file} --output {args.output}")
+    print(f"✓ To generate HTML report: python html_report_generator.py --input {json_file} --output {REPORTS_DIR / 'sata_valuation_report.html'}")
     print(f"✓ Total execution time: {minutes}:{total_time - minutes*60:05.2f}")
 
 

@@ -34,6 +34,8 @@ from treasury_zero_curve import (
     try_build_treasury_zero_curve,
 )
 
+from strc_paths import OUTPUT_DIR as DEFAULT_OUTPUT_DIR
+
 DEFAULT_RISK_FREE = 0.042
 DEFAULT_DIV_YIELD = 0.0
 DEFAULT_TREE_STEPS = 128
@@ -337,8 +339,8 @@ def save_json(path: Path, data: Any) -> None:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Add American binomial delta (from mid) to IBIT JSON.")
-    p.add_argument("--ibit-data", type=Path, default=Path("ibit_data.json"))
-    p.add_argument("--ibit-options", type=Path, default=Path("ibit_options.json"))
+    p.add_argument("--ibit-data", type=Path, default=DEFAULT_OUTPUT_DIR / "ibit_data.json")
+    p.add_argument("--ibit-options", type=Path, default=DEFAULT_OUTPUT_DIR / "ibit_options.json")
     p.add_argument(
         "--flat-risk-free",
         type=float,
@@ -357,8 +359,8 @@ def main() -> None:
     p.add_argument(
         "--yield-curve",
         type=Path,
-        default=Path("yield_curve.json"),
-        help="Path from fetch_data.py (default: ./yield_curve.json)",
+        default=DEFAULT_OUTPUT_DIR / "yield_curve.json",
+        help=f"Path from fetch_data.py (default: {DEFAULT_OUTPUT_DIR / 'yield_curve.json'})",
     )
     p.add_argument("--dry-run", action="store_true", help="Compute but do not write files")
     p.add_argument("-q", "--quiet", action="store_true", help="Suppress per-expiration progress lines")
@@ -367,6 +369,19 @@ def main() -> None:
     flat_r = args.flat_risk_free
     if args.risk_free is not None and flat_r is None:
         flat_r = args.risk_free
+
+    if not args.ibit_data.is_file():
+        leg = Path("ibit_data.json")
+        if leg.is_file():
+            args.ibit_data = leg
+    if not args.ibit_options.is_file():
+        leg = Path("ibit_options.json")
+        if leg.is_file():
+            args.ibit_options = leg
+    if not args.yield_curve.is_file():
+        leg = Path("yield_curve.json")
+        if leg.is_file():
+            args.yield_curve = leg
 
     if not args.ibit_data.is_file():
         print(f"Missing {args.ibit_data}", file=sys.stderr)

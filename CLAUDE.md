@@ -18,22 +18,24 @@ Uses a local `venv/` directory. Matplotlib is configured for headless operation 
 
 ## Pipeline: How to Run
 
+Generated artifacts use a flat **`output/`** directory (JSON, `.npy` / `.npz`, valuation results, PNG charts under `output/plots/`) and **`reports/`** for HTML deliverables. Paths are centralized in `strc_paths.py`; scripts fall back to legacy cwd filenames if a file is missing under `output/`.
+
 The analysis runs in four sequential stages:
 
 ```bash
-# 1. Fetch live market and treasury data (writes JSON files)
+# 1. Fetch live market data (writes JSON under output/)
 python fetch_data.py
 
-# 2. Generate Bitcoin price paths (~1GB output, takes several minutes)
+# 2. Generate Bitcoin price paths (~1GB under output/, takes several minutes)
 python btc_price_paths.py
 
-# 3. Run the valuation engine (reads price paths, writes results JSON + plots)
-python sata_valuation.py [--output results.json] [--plots-dir plots] \
-    [--num-workers N] [--optimization-level 0|1|2] [--baseline-only]
+# 3. Run the valuation engine (reads paths from output/ by default)
+python sata_valuation.py [--data-dir output] [--output output/sata_valuation_results.json] \
+    [--plots-dir output/plots] [--num-workers N] [--optimization-level 0|1|2] [--baseline-only]
 
-# 4. Generate the HTML report
-python html_report_generator.py [--input sata_valuation_results.json] \
-    [--output sata_valuation_report.html]
+# 4. Generate the HTML report (default: reports/sata_valuation_report.html)
+python html_report_generator.py [--input output/sata_valuation_results.json] \
+    [--output reports/sata_valuation_report.html]
 ```
 
 `--optimization-level 2` (default) enables early termination for insolvent simulation paths, which dramatically reduces runtime.
@@ -43,27 +45,30 @@ python html_report_generator.py [--input sata_valuation_results.json] \
 ### Data Flow
 
 ```
-fetch_data.py / test_treasury_api.py
-    → treasury_extracted_data.json  (BTCC holdings, cash, shares outstanding)
-    → btc_historical_data.json, mstr_data.json, ibit_data.json, etc.
+fetch_data.py
+    → output/mstr_data.json, output/ibit_data.json, output/btc_historical_data.json, output/yield_curve.json, etc.
+
+test_treasury_api.py
+    → output/treasury_extracted_data.json  (BTCC holdings, cash, shares outstanding)
 
 btc_price_paths.py
-    → btc_price_paths_scenarios_price_paths.npy   (~1GB uncompressed)
-    → btc_price_paths_scenarios_metadata.npz
+    → output/btc_price_paths_scenarios_price_paths.npy   (~1GB uncompressed)
+    → output/btc_price_paths_scenarios_metadata.npz
+    → output/plots/*.png
 
 sata_valuation.py
-    → loads treasury JSON + price path files
+    → reads treasury + price path files from output/ (or legacy cwd)
     → runs parallel Monte Carlo simulations (ProcessPoolExecutor)
-    → sata_valuation_results.json
-    → plots/ directory
+    → output/sata_valuation_results.json
+    → output/plots/*.png
 
 html_report_generator.py
-    → sata_valuation_report.html (charts embedded as base64)
+    → reports/sata_valuation_report.html (charts embedded as base64)
 ```
 
 ### Configuration System
 
-All model parameters live in the `Configuration` class at the top of `sata_valuation.py`. At runtime, `setup_configuration_and_data()` overrides defaults with live values from `treasury_extracted_data.json` (bitcoin holdings, cash reserve, shares outstanding, current BTC price). When editing model parameters, change them in the `Configuration` class — not in individual functions.
+All model parameters live in the `Configuration` class at the top of `sata_valuation.py`. At runtime, `setup_configuration_and_data()` overrides defaults with live values from `output/treasury_extracted_data.json` when present (bitcoin holdings, cash reserve, shares outstanding, current BTC price), with a fallback to the legacy cwd file `treasury_extracted_data.json`. When editing model parameters, change them in the `Configuration` class — not in individual functions.
 
 ### Simulation Architecture
 
@@ -97,12 +102,13 @@ The suspension threshold multiplier is the key sensitivity parameter — tested 
 
 | File | Purpose |
 |------|---------|
-| `sata_valuation.py` | Main engine (1,676 lines): Configuration class, simulation logic, all four analyses |
+| `strc_paths.py` | Default `output/`, `output/plots/`, and `reports/` path constants |
+| `sata_valuation.py` | Main engine: Configuration class, simulation logic, all four analyses |
 | `btc_price_paths.py` | Monte Carlo BTC price generation with manually tunable distribution parameters |
-| `html_report_generator.py` | Reads results JSON, produces self-contained HTML report |
-| `fetch_data.py` | Fetches live data from Yahoo Finance and treasury.strive.com |
-| `test_treasury_api.py` | Alternative/validation treasury data fetcher |
-| `treasury_extracted_data.json` | Runtime configuration source — overrides Configuration defaults |
+| `html_report_generator.py` | Reads results JSON, produces self-contained HTML report under `reports/` |
+| `fetch_data.py` | Fetches live data from Yahoo Finance; writes JSON under `output/` |
+| `test_treasury_api.py` | Treasury data fetcher → `output/treasury_extracted_data.json` |
+| `output/treasury_extracted_data.json` | Runtime configuration source — overrides Configuration defaults when present |
 
 ## Distribution Parameters
 

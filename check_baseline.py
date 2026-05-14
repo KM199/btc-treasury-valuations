@@ -4,8 +4,16 @@ Check if baseline scenario is included in scenario results.
 """
 
 import json
+from pathlib import Path
 
-with open('scenario_test.json', 'r') as f:
+from strc_paths import OUTPUT_DIR
+
+_candidates = [Path("scenario_test.json"), OUTPUT_DIR / "sata_valuation_results.json"]
+_path = next((p for p in _candidates if p.is_file()), None)
+if _path is None:
+    raise SystemExit("Need scenario_test.json or output/sata_valuation_results.json")
+
+with open(_path, 'r') as f:
     data = json.load(f)
 
 scenario_results = data['scenario_results']
