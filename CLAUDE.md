@@ -121,4 +121,4 @@ Adjust these constants directly when recalibrating the model to current market c
 
 ## Notebooks
 
-Seven Jupyter notebooks provide interactive exploration. `sata_valuation.ipynb` is the primary analysis workflow; `sata_playground.ipynb` is for experimentation. The notebooks are not the authoritative computation — the `.py` scripts are.
+Six Jupyter notebooks provide interactive exploration (`strc_valuation.ipynb`, `sata_playground.ipynb`, and others for IBIT/MSTR side analysis). **SATA valuation** is driven only by `sata_valuation.py` — there is no parallel `sata_valuation.ipynb`. The notebooks are not the authoritative computation — the `.py` scripts are.
