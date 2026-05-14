@@ -1,0 +1,45 @@
+# Virtual environments
+venv/
+.venv/
+
+# Generated artifacts (see strc_paths / pipeline)
+output/
+reports/
+
+# Legacy plot dir at repo root
+plots/
+
+# Large / binary simulation outputs (any location)
+*.npy
+*.npz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.pytest_cache/
+.mypy_cache/
+
+# Environment and OS
+.env
+.env.*
+.DS_Store
+
+# IDE / local tooling
+.cursor/
+
+# Ad-hoc plot folders at repo root
+matrix_plots/
+perf_plots/
+output.png
+
+# Optional: root-level fetched / run artifacts (regenerable; avoid accidental commit)
+*_data.json
+*_options.json
+yield_curve.json
+treasury_extracted_data.json
+btc_historical_data.json
+sata_valuation_results.json
+sata_valuation_report.html

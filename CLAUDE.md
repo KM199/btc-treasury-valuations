@@ -1,0 +1,118 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+STRC Sim is a **Bitcoin Treasury Valuation System** that models and values SATA preferred stock issued by a Bitcoin Treasury Company. It runs Monte Carlo simulations of Bitcoin price paths over 100 years to determine dividend sustainability and NPV-based fair value per share.
+
+## Environment Setup
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Uses a local `venv/` directory. Matplotlib is configured for headless operation (`Agg` backend) — do not attempt to display plots interactively.
+
+## Pipeline: How to Run
+
+The analysis runs in four sequential stages:
+
+```bash
+# 1. Fetch live market and treasury data (writes JSON files)
+python fetch_data.py
+
+# 2. Generate Bitcoin price paths (~1GB output, takes several minutes)
+python btc_price_paths.py
+
+# 3. Run the valuation engine (reads price paths, writes results JSON + plots)
+python sata_valuation.py [--output results.json] [--plots-dir plots] \
+    [--num-workers N] [--optimization-level 0|1|2] [--baseline-only]
+
+# 4. Generate the HTML report
+python html_report_generator.py [--input sata_valuation_results.json] \
+    [--output sata_valuation_report.html]
+```
+
+`--optimization-level 2` (default) enables early termination for insolvent simulation paths, which dramatically reduces runtime.
+
+## Architecture
+
+### Data Flow
+
+```
+fetch_data.py / test_treasury_api.py
+    → treasury_extracted_data.json  (BTCC holdings, cash, shares outstanding)
+    → btc_historical_data.json, mstr_data.json, ibit_data.json, etc.
+
+btc_price_paths.py
+    → btc_price_paths_scenarios_price_paths.npy   (~1GB uncompressed)
+    → btc_price_paths_scenarios_metadata.npz
+
+sata_valuation.py
+    → loads treasury JSON + price path files
+    → runs parallel Monte Carlo simulations (ProcessPoolExecutor)
+    → sata_valuation_results.json
+    → plots/ directory
+
+html_report_generator.py
+    → sata_valuation_report.html (charts embedded as base64)
+```
+
+### Configuration System
+
+All model parameters live in the `Configuration` class at the top of `sata_valuation.py`. At runtime, `setup_configuration_and_data()` overrides defaults with live values from `treasury_extracted_data.json` (bitcoin holdings, cash reserve, shares outstanding, current BTC price). When editing model parameters, change them in the `Configuration` class — not in individual functions.
+
+### Simulation Architecture
+
+`sata_valuation.py` runs four distinct analyses:
+1. **Baseline**: 10,000 simulations at the current BTC price
+2. **Multi-scenario**: Same 10,000 paths tested at 21 different BTC starting prices (±10%)
+3. **Threshold sensitivity**: How the dividend suspension threshold multiplier affects NPV
+4. **BTC credit ratio sensitivity**: Dynamic analysis based on current holdings ratio
+
+The inner simulation loop (`simulate_dividend_path`) is JIT-compiled with Numba when available, falling back to pure Python silently. Parallel execution uses `ProcessPoolExecutor`; if multiprocessing fails it falls back to serial.
+
+### Price Path File Format
+
+`btc_price_paths.py` writes two files intentionally:
+- `.npy` (uncompressed): fast memory-mapped loading of the 10,000 × 1,200-month price matrix
+- `.npz` (compressed): scenario metadata and parameters
+
+This split avoids decompression overhead on the large array at valuation time.
+
+### Dividend Suspension Logic
+
+Each monthly simulation step:
+1. Calculate adjusted BTC credit = `(btc_holdings × price + cash) / total_par_value`
+2. If credit > suspension threshold multiplier: attempt to pay dividend from cash, then sell BTC if needed
+3. If insufficient: suspend dividend and start compounding unpaid amount (12.5%–20% annual, +25bps/month, capped at 20%)
+4. Track cumulative NPV using pre-computed monthly discount factors
+
+The suspension threshold multiplier is the key sensitivity parameter — tested from 0× to 2× par value.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `sata_valuation.py` | Main engine (1,676 lines): Configuration class, simulation logic, all four analyses |
+| `btc_price_paths.py` | Monte Carlo BTC price generation with manually tunable distribution parameters |
+| `html_report_generator.py` | Reads results JSON, produces self-contained HTML report |
+| `fetch_data.py` | Fetches live data from Yahoo Finance and treasury.strive.com |
+| `test_treasury_api.py` | Alternative/validation treasury data fetcher |
+| `treasury_extracted_data.json` | Runtime configuration source — overrides Configuration defaults |
+
+## Distribution Parameters
+
+Bitcoin price returns in `btc_price_paths.py` use a **manually tuned skewed distribution** (not auto-fitted). Top-of-file constants control the shape:
+- `DIST_MEAN`, `DIST_STD`: base normal parameters
+- `DIST_SKEW`: asymmetry (negative = left-skewed / bearish bias)
+- Tail weight and kurtosis constants
+
+Adjust these constants directly when recalibrating the model to current market conditions.
+
+## Notebooks
+
+Seven Jupyter notebooks provide interactive exploration. `sata_valuation.ipynb` is the primary analysis workflow; `sata_playground.ipynb` is for experimentation. The notebooks are not the authoritative computation — the `.py` scripts are.
