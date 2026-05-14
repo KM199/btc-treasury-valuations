@@ -26,6 +26,9 @@ The analysis runs in four sequential stages:
 # 1. Fetch live market data (writes JSON under output/)
 python fetch_data.py
 
+# 1b. Fetch Strive treasury snapshot (output/treasury_extracted_data.json)
+python fetch_treasury_api.py
+
 # 2. Generate Bitcoin price paths (~1GB under output/, takes several minutes)
 python btc_price_paths.py
 
@@ -47,8 +50,9 @@ python html_report_generator.py [--input output/sata_valuation_results.json] \
 ```
 fetch_data.py
     → output/mstr_data.json, output/ibit_data.json, output/btc_historical_data.json, output/yield_curve.json, etc.
+    (yield curve bootstrap: fetch_treasury_zero_yieldcurve.py)
 
-test_treasury_api.py
+fetch_treasury_api.py
     → output/treasury_extracted_data.json  (BTCC holdings, cash, shares outstanding)
 
 btc_price_paths.py
@@ -107,7 +111,8 @@ The suspension threshold multiplier is the key sensitivity parameter — tested 
 | `btc_price_paths.py` | Monte Carlo BTC price generation with manually tunable distribution parameters |
 | `html_report_generator.py` | Reads results JSON, produces self-contained HTML report under `reports/` |
 | `fetch_data.py` | Fetches live data from Yahoo Finance; writes JSON under `output/` |
-| `test_treasury_api.py` | Treasury data fetcher → `output/treasury_extracted_data.json` |
+| `fetch_treasury_zero_yieldcurve.py` | FRED yields → bootstrapped Treasury zero curve (`build_treasury_zero_curve`); used by `fetch_data.py` and `ibit_option_deltas.py` |
+| `fetch_treasury_api.py` | Strive/strategytracker treasury JSON → `output/treasury_extracted_data.json` |
 | `output/treasury_extracted_data.json` | Runtime configuration source — overrides Configuration defaults when present |
 
 ## Distribution Parameters

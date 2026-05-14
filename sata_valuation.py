@@ -300,13 +300,13 @@ def execute_parallel_with_fallback(worker_function: callable, tasks: List[Any],
 # ============================================================================
 
 def load_btcc_data(data_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Load treasury data from ``<data_dir>/treasury_extracted_data.json`` (from test_treasury_api.py)."""
+    """Load treasury data from ``<data_dir>/treasury_extracted_data.json`` (from fetch_treasury_api.py)."""
     data: Dict[str, Any] = {}
     root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
     treasury_data_file = root / "treasury_extracted_data.json"
 
     if not treasury_data_file.is_file():
-        print("  Run: python test_treasury_api.py to fetch latest data.")
+        print("  Run: python fetch_treasury_api.py to fetch latest data.")
         return {}
 
     try:

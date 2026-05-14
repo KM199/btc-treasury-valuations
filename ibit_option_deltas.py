@@ -11,7 +11,7 @@ Run after fetch_data (or whenever chains are updated):
   python ibit_option_deltas.py
 
 By default loads yield_curve.json from fetch_data.py; if missing, pulls FRED live.
-See treasury_zero_curve.py. Override with --flat-risk-free 0.042.
+See fetch_treasury_zero_yieldcurve.py. Override with --flat-risk-free 0.042.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import numpy as np
 
 import requests
 
-from treasury_zero_curve import (
+from fetch_treasury_zero_yieldcurve import (
     TreasuryZeroCurve,
     load_yield_curve_json,
     try_build_treasury_zero_curve,

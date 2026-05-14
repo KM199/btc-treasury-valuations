@@ -8,7 +8,7 @@ This script fetches:
 - BTC-per-share ratio constant for IBIT
 - BTCC treasury data (Bitcoin holdings, cash, SATA preferred stock data) from treasury.strive.com
 - BTC historical price data and monthly returns
-- U.S. Treasury discount curve (FRED DGS yields + bootstrap) to yield_curve.json
+- U.S. Treasury discount curve (FRED DGS yields + bootstrap via `fetch_treasury_zero_yieldcurve.py`) to yield_curve.json
 - Saves JSON files under `output/` by default (override with `--output-dir`): mstr_data.json, mstr_options.json, ibit_data.json, ibit_options.json, btc_historical_data.json, and yield_curve.json
 """
 
@@ -22,7 +22,7 @@ import requests
 import re
 import numpy as np
 
-from treasury_zero_curve import build_treasury_zero_curve
+from fetch_treasury_zero_yieldcurve import build_treasury_zero_curve
 from strc_paths import OUTPUT_DIR, ensure_output_dirs
 
 # Constants
