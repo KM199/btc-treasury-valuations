@@ -14,7 +14,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Uses a local `venv/` directory. Matplotlib is configured for headless operation (`Agg` backend) — do not attempt to display plots interactively.
+Use a **single** local virtualenv at `venv/` (do not maintain a parallel `.venv/` — it duplicates hundreds of MB and divergent package sets). Matplotlib is configured for headless operation (`Agg` backend) — do not attempt to display plots interactively.
 
 ## Pipeline: How to Run
 
