@@ -465,11 +465,6 @@ def main():
 
     # Load BTC historical data from JSON
     json_file = str(historical_json)
-    if not os.path.isfile(json_file):
-        legacy = "btc_historical_data.json"
-        if os.path.isfile(legacy):
-            print(f"  Using legacy path for historical data: {legacy}")
-            json_file = legacy
 
     try:
         with open(json_file, 'r') as f:

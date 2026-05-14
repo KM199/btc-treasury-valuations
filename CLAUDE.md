@@ -18,7 +18,7 @@ Uses a local `venv/` directory. Matplotlib is configured for headless operation 
 
 ## Pipeline: How to Run
 
-Generated artifacts use a flat **`output/`** directory (JSON, `.npy` / `.npz`, valuation results, PNG charts under `output/plots/`) and **`reports/`** for HTML deliverables. Paths are centralized in `strc_paths.py`; scripts fall back to legacy cwd filenames if a file is missing under `output/`.
+Generated artifacts use a flat **`output/`** directory (JSON, `.npy` / `.npz`, valuation results, PNG charts under `output/plots/`) and **`reports/`** for HTML deliverables. Paths are centralized in `strc_paths.py`.
 
 The analysis runs in four sequential stages:
 
@@ -57,7 +57,7 @@ btc_price_paths.py
     → output/plots/*.png
 
 sata_valuation.py
-    → reads treasury + price path files from output/ (or legacy cwd)
+    → reads treasury + price path files from output/
     → runs parallel Monte Carlo simulations (ProcessPoolExecutor)
     → output/sata_valuation_results.json
     → output/plots/*.png
@@ -68,7 +68,7 @@ html_report_generator.py
 
 ### Configuration System
 
-All model parameters live in the `Configuration` class at the top of `sata_valuation.py`. At runtime, `setup_configuration_and_data()` overrides defaults with live values from `output/treasury_extracted_data.json` when present (bitcoin holdings, cash reserve, shares outstanding, current BTC price), with a fallback to the legacy cwd file `treasury_extracted_data.json`. When editing model parameters, change them in the `Configuration` class — not in individual functions.
+All model parameters live in the `Configuration` class at the top of `sata_valuation.py`. At runtime, `setup_configuration_and_data()` overrides defaults with live values from `output/treasury_extracted_data.json` when present (bitcoin holdings, cash reserve, shares outstanding, current BTC price). When editing model parameters, change them in the `Configuration` class — not in individual functions.
 
 ### Simulation Architecture
 

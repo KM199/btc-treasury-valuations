@@ -300,83 +300,59 @@ def execute_parallel_with_fallback(worker_function: callable, tasks: List[Any],
 # ============================================================================
 
 def load_btcc_data(data_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Load BTCC treasury data from JSON file.
-
-    First tries ``<data_dir>/treasury_extracted_data.json``, then the legacy
-    cwd file ``treasury_extracted_data.json`` (from test_treasury_api.py).
-    """
+    """Load treasury data from ``<data_dir>/treasury_extracted_data.json`` (from test_treasury_api.py)."""
     data: Dict[str, Any] = {}
     root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
+    treasury_data_file = root / "treasury_extracted_data.json"
 
-    candidates = [root / "treasury_extracted_data.json", Path("treasury_extracted_data.json")]
-    for treasury_data_file in candidates:
-        if not treasury_data_file.is_file():
-            continue
-        try:
-            with open(treasury_data_file, 'r') as f:
-                treasury_data = json.load(f)
-            print(f"✓ Loaded treasury data from {treasury_data_file}")
-            if 'timestamp' in treasury_data:
-                print(f"  Data timestamp: {treasury_data['timestamp']}")
+    if not treasury_data_file.is_file():
+        print("  Run: python test_treasury_api.py to fetch latest data.")
+        return {}
 
-            if 'btc_holdings' in treasury_data:
-                data['bitcoin_holdings'] = treasury_data['btc_holdings']
-                print(f"  BTC Holdings: {data['bitcoin_holdings']:,.2f} BTC")
+    try:
+        with open(treasury_data_file, 'r') as f:
+            treasury_data = json.load(f)
+        print(f"✓ Loaded treasury data from {treasury_data_file}")
+        if 'timestamp' in treasury_data:
+            print(f"  Data timestamp: {treasury_data['timestamp']}")
 
-            if 'cash' in treasury_data:
-                data['cash'] = treasury_data['cash']
-                print(f"  Cash: ${data['cash']:,.0f}")
+        if 'btc_holdings' in treasury_data:
+            data['bitcoin_holdings'] = treasury_data['btc_holdings']
+            print(f"  BTC Holdings: {data['bitcoin_holdings']:,.2f} BTC")
 
-            if 'sata_shares' in treasury_data:
-                data['sata_shares'] = treasury_data['sata_shares']
-                print(f"  SATA Shares: {data['sata_shares']:,}")
+        if 'cash' in treasury_data:
+            data['cash'] = treasury_data['cash']
+            print(f"  Cash: ${data['cash']:,.0f}")
 
-            if 'sata_dividend_rate' in treasury_data:
-                dividend_rate = treasury_data['sata_dividend_rate']
-                if dividend_rate > 1:
-                    dividend_rate = dividend_rate / 100.0
-                data['sata_dividend_rate'] = dividend_rate
-                print(f"  SATA Dividend Rate: {data['sata_dividend_rate']:.2%}")
+        if 'sata_shares' in treasury_data:
+            data['sata_shares'] = treasury_data['sata_shares']
+            print(f"  SATA Shares: {data['sata_shares']:,}")
 
-            if 'sata_price' in treasury_data:
-                data['sata_current_price'] = treasury_data['sata_price']
-                print(f"  SATA Current Price: ${data['sata_current_price']:.2f}")
+        if 'sata_dividend_rate' in treasury_data:
+            dividend_rate = treasury_data['sata_dividend_rate']
+            if dividend_rate > 1:
+                dividend_rate = dividend_rate / 100.0
+            data['sata_dividend_rate'] = dividend_rate
+            print(f"  SATA Dividend Rate: {data['sata_dividend_rate']:.2%}")
 
-            return data
-        except Exception as e:
-            print(f"⚠ Error loading {treasury_data_file}: {e}")
-            return {}
+        if 'sata_price' in treasury_data:
+            data['sata_current_price'] = treasury_data['sata_price']
+            print(f"  SATA Current Price: ${data['sata_current_price']:.2f}")
 
-    print("  Run: python test_treasury_api.py to fetch latest data.")
-    return {}
+        return data
+    except Exception as e:
+        print(f"⚠ Error loading {treasury_data_file}: {e}")
+        return {}
 
 
 def load_price_paths(data_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Load Bitcoin price paths from optimized split files or JSON."""
+    """Load Bitcoin price paths from ``<data_dir>/`` (split npy/npz or JSON formats)."""
     root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
 
-    npy_pairs = [
-        (root / "btc_price_paths_scenarios_price_paths.npy", root / "btc_price_paths_scenarios_metadata.npz"),
-        (Path("btc_price_paths_scenarios_price_paths.npy"), Path("btc_price_paths_scenarios_metadata.npz")),
-    ]
-    price_paths_file = str(npy_pairs[0][0])
-    metadata_file = str(npy_pairs[0][1])
-    for npy, meta in npy_pairs:
-        if npy.is_file() and meta.is_file():
-            price_paths_file, metadata_file = str(npy), str(meta)
-            break
-
-    json_scenarios_candidates = [
-        root / "btc_price_paths_scenarios.json",
-        Path("btc_price_paths_scenarios.json"),
-    ]
-    json_file_scenarios = str(next((p for p in json_scenarios_candidates if p.is_file()), json_scenarios_candidates[0]))
-
-    json_old_candidates = [
-        root / "btc_price_paths.json",
-        Path("btc_price_paths.json"),
-    ]
-    json_file_old = str(next((p for p in json_old_candidates if p.is_file()), json_old_candidates[0]))
+    price_paths_file = str(root / "btc_price_paths_scenarios_price_paths.npy")
+    metadata_file = str(root / "btc_price_paths_scenarios_metadata.npz")
+    json_file_scenarios = str(root / "btc_price_paths_scenarios.json")
+    json_file_old = str(root / "btc_price_paths.json")
     
     use_npz = False
     use_scenarios = False

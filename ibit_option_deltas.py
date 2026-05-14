@@ -371,19 +371,6 @@ def main() -> None:
         flat_r = args.risk_free
 
     if not args.ibit_data.is_file():
-        leg = Path("ibit_data.json")
-        if leg.is_file():
-            args.ibit_data = leg
-    if not args.ibit_options.is_file():
-        leg = Path("ibit_options.json")
-        if leg.is_file():
-            args.ibit_options = leg
-    if not args.yield_curve.is_file():
-        leg = Path("yield_curve.json")
-        if leg.is_file():
-            args.yield_curve = leg
-
-    if not args.ibit_data.is_file():
         print(f"Missing {args.ibit_data}", file=sys.stderr)
         sys.exit(1)
 

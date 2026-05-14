@@ -19,10 +19,10 @@ ROOT = Path(__file__).resolve().parent
 def _load_ibit_data():
     from strc_paths import OUTPUT_DIR
 
-    for p in (OUTPUT_DIR / "ibit_data.json", ROOT / "ibit_data.json"):
-        if p.is_file():
-            return json.loads(p.read_text())
-    return None
+    p = OUTPUT_DIR / "ibit_data.json"
+    if not p.is_file():
+        return None
+    return json.loads(p.read_text())
 
 
 class TestIbitOptionDeltasConvexity(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestIbitOptionDeltasConvexity(unittest.TestCase):
 
     def test_parallel_shock_has_even_gamma_contribution(self):
         if self.data is None:
-            self.skipTest("ibit_data.json not present")
+            self.skipTest("output/ibit_data.json not present (run fetch_data.py)")
         from ibit_option_deltas import (
             DEFAULT_TREE_STEPS,
             _parse_valuation_datetime,
@@ -100,7 +100,7 @@ class TestIbitOptionDeltasConvexity(unittest.TestCase):
 
     def test_gamma_magnitude_atm_strike(self):
         if self.data is None:
-            self.skipTest("ibit_data.json not present")
+            self.skipTest("output/ibit_data.json not present (run fetch_data.py)")
         from ibit_option_deltas import (
             DEFAULT_TREE_STEPS,
             _parse_valuation_datetime,
@@ -136,7 +136,7 @@ class TestIbitOptionDeltasConvexity(unittest.TestCase):
     def test_full_repricing_long_put_loses_when_spot_up(self):
         """Notebook-style parallel shock: same σ, bump S and r; long put must lose when IBIT rises."""
         if self.data is None:
-            self.skipTest("ibit_data.json not present")
+            self.skipTest("output/ibit_data.json not present (run fetch_data.py)")
         from ibit_option_deltas import (
             DEFAULT_DIV_YIELD,
             DEFAULT_TREE_STEPS,

@@ -525,11 +525,6 @@ def main():
     ensure_output_dirs()
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists(args.input):
-        legacy = "sata_valuation_results.json"
-        if os.path.isfile(legacy):
-            args.input = legacy
-
     # Validate input file exists
     if not os.path.exists(args.input):
         raise FileNotFoundError(f"Input JSON file not found: {args.input}")
