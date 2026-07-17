@@ -1,0 +1,864 @@
+#!/usr/bin/env python3
+"""
+Fetch MicroStrategy treasury data from strategy.com (homepage, /debt, /shares)
+and enrich with Yahoo Finance prices. Writes hedge JSON for mstr_options_hedge.ipynb.
+
+Network responses are cached for 1 hour under output/cache/ (see data_cache.py).
+Use --force-refresh to bypass the cache for a run.
+
+Run after fetch_data.py (reuses btc_historical_data.json and mstr_data.json when present):
+  python fetch_mstr_treasury.py
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from datetime import datetime
+from pathlib import Path
+
+import requests
+import yfinance as yf
+from bs4 import BeautifulSoup
+
+from data_cache import cached_http_get
+from mstr_liquidation import (
+    total_preferred_annual_dividends_usd_from_tracker,
+    usd_months_dividend_coverage_from_cash,
+)
+from strc_paths import OUTPUT_DIR, ensure_output_dirs
+from fetch_yahoo import cached_yahoo_history, load_btc_spot, load_json_price, yahoo_spot_price
+
+load_btc_price = load_btc_spot  # backward-compatible alias
+
+
+def convert_issue_market_value_usd(debt: dict) -> float:
+    """Market value of one convert: prefer last_traded_price (% of par) × notional.
+
+    strategy.com/debt shows Price and Market Val ($M). CMS ``market_value`` is
+    sometimes stale/wrong, so we recompute from ``last_traded_price`` when present.
+    Falls back to CMS market_value, then face/notional.
+    """
+    notional = float(debt.get("notional") or debt.get("principal") or 0)
+    price = debt.get("last_traded_price")
+    if price is not None and notional > 0:
+        p = float(price)
+        # Bond convention: 104.42 means 104.42% of face
+        if 1.0 < p < 500.0:
+            return notional * (p / 100.0)
+    mv = debt.get("market_value")
+    if mv is not None:
+        return float(mv)
+    return notional
+
+STRATEGY_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
+
+def _fetch_strategy_btc_tracker_latest(*, force_refresh: bool = False) -> dict | None:
+    """Latest btcTrackerData row from strategy.com homepage (single cached HTTP GET)."""
+    try:
+        page_text = cached_http_get(
+            "https://www.strategy.com/",
+            headers=STRATEGY_HEADERS,
+            timeout=15,
+            cache_key="strategy_com_home",
+            force=force_refresh,
+        )
+    except requests.RequestException:
+        return None
+    if not page_text:
+        return None
+    soup = BeautifulSoup(page_text, "html.parser")
+    script_tag = soup.find("script", {"id": "__NEXT_DATA__"})
+    if not script_tag:
+        return None
+    try:
+        next_data = json.loads(script_tag.string)
+        btc_tracker_data = (
+            next_data.get("props", {}).get("pageProps", {}).get("btcTrackerData", [])
+        )
+        if not btc_tracker_data:
+            return None
+        return btc_tracker_data[0]
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
+STRE_PAR_EUR = 100.0
+# STRE IPO'd Nov 2025 at €80 (20% discount to par). Thin LuxSE liquidity; no Yahoo data.
+STRE_MARKET_PRICE_EUR = 80.0
+
+
+def stre_price_from_strategy_metrics(stre: dict) -> tuple[float, float] | None:
+    """
+    STRE USD/EUR from strategy.com stre_metrics (LuxSE — not on Yahoo).
+
+    Uses explicit price/effective_yield when present; else stated amount outstanding
+    (notional_intl × €100) / shares with strategy.com current_fx_rate.
+    """
+    stre = stre or {}
+    fx = stre.get("current_fx_rate")
+    if fx is None or float(fx) <= 0:
+        return None
+    fx = float(fx)
+
+    if stre.get("price") is not None:
+        price_eur = float(stre["price"])
+        return price_eur, price_eur * fx
+
+    div = stre.get("dividend")
+    ey = stre.get("effective_yield")
+    if div is not None and ey is not None and float(ey) > 0:
+        d = float(div)
+        e = float(ey)
+        e = e / 100.0 if e > 1 else e
+        price_eur = STRE_PAR_EUR * (d / 100.0) / e
+        return price_eur, price_eur * fx
+
+    shares = stre.get("shares")
+    intl = stre.get("notional_intl")
+    if shares and intl:
+        # notional_intl: stated amount outstanding in €100 blocks (e.g. 7_750_000 → €775M).
+        # Only use this when notional_intl matches the current share count (same offering tranche).
+        # If more shares were issued since the original offering, this ratio gives a wrong price.
+        discrepancy = abs(int(shares) - float(intl)) / max(float(intl), 1)
+        if discrepancy < 0.05:
+            notional_eur = float(intl) * STRE_PAR_EUR
+            price_eur = notional_eur / int(shares)
+            return price_eur, price_eur * fx
+
+    return STRE_MARKET_PRICE_EUR, STRE_MARKET_PRICE_EUR * fx
+
+
+def apply_stre_price_from_strategy(
+    data: dict,
+    *,
+    force_refresh: bool = False,
+) -> None:
+    """Set stre_price / stre_price_eur on data from cached strategy.com btcTrackerData."""
+    if data.get("stre_price"):
+        return
+    latest = _fetch_strategy_btc_tracker_latest(force_refresh=force_refresh)
+    if not latest:
+        return
+    stre = latest.get("stre_metrics") or {}
+    prices = stre_price_from_strategy_metrics(stre)
+    if prices is None:
+        return
+    data["stre_price_eur"], data["stre_price"] = prices
+    data["stre_fx_rate"] = float(stre.get("current_fx_rate") or 0)
+
+
+def parse_strc_metrics_from_tracker(latest_data: dict) -> dict:
+    """STRC fields from a btcTrackerData entry (no network)."""
+    strc = latest_data.get("strc_metrics") or {}
+    out: dict = {}
+    if "shares" in strc:
+        out["shares"] = int(strc["shares"])
+    if strc.get("dividend") is not None:
+        out["dividend_rate"] = float(strc["dividend"]) / 100.0
+    if strc.get("notional") is not None:
+        out["notional"] = float(strc["notional"])
+    if strc.get("effective_yield") is not None:
+        ey = float(strc["effective_yield"])
+        out["effective_yield"] = ey / 100.0 if ey > 1 else ey
+    if strc.get("price") is not None:
+        out["price"] = float(strc["price"])
+    if latest_data.get("as_of_date"):
+        out["as_of_date"] = latest_data["as_of_date"]
+    return out
+
+
+def fetch_strc_metrics_from_strategy(*, force_refresh: bool = False) -> dict | None:
+    """All STRC website metrics in one strategy.com request (cached)."""
+    latest = _fetch_strategy_btc_tracker_latest(force_refresh=force_refresh)
+    if latest is None:
+        return None
+    metrics = parse_strc_metrics_from_tracker(latest)
+    return metrics or None
+
+
+def fetch_mstr_strategy_raw(*, force_refresh: bool = False) -> dict:
+    """
+    Fetch MicroStrategy financial data from strategy.com
+    (homepage btcTrackerData + /debt + /shares).
+    """
+    print("Fetching MicroStrategy financial data from https://www.strategy.com/...")
+    data: dict = {}
+
+    try:
+        latest_data = _fetch_strategy_btc_tracker_latest(force_refresh=force_refresh)
+        if latest_data is None:
+            print("  ✗ Could not load btcTrackerData from strategy.com")
+        else:
+            if "btc_holdings" in latest_data:
+                data["bitcoin_holdings"] = int(latest_data["btc_holdings"])
+                print(f"  ✓ Bitcoin holdings: {data['bitcoin_holdings']:,} BTC")
+
+            if "cash" in latest_data:
+                data["cash"] = float(latest_data["cash"])
+                data["usd_reserve_usd"] = data["cash"]
+                print(f"  ✓ Cash reserve: ${data['cash']:,.0f}")
+
+            if "annual_dividends" in latest_data and latest_data["annual_dividends"] is not None:
+                data["annual_dividends"] = float(latest_data["annual_dividends"])
+                data["annual_dividends_musd"] = data["annual_dividends"]
+                print(f"  ✓ Annual dividends (reported): ${data['annual_dividends']:,.1f}M")
+
+            pref_annual = total_preferred_annual_dividends_usd_from_tracker(latest_data)
+            if pref_annual > 0:
+                data["total_preferred_annual_dividends_usd"] = pref_annual
+                months = usd_months_dividend_coverage_from_cash(
+                    float(latest_data.get("cash") or 0), pref_annual
+                )
+                print(
+                    f"  ✓ Preferred annual dividends (stated coupons): ${pref_annual / 1e6:,.1f}M"
+                )
+                print(f"  ✓ USD months of dividend coverage: {months:.1f}")
+
+            if "mstr_shares" in latest_data:
+                data["mstr_shares"] = int(latest_data["mstr_shares"])
+                print(f"  ✓ MSTR shares outstanding: {data['mstr_shares']:,}")
+            elif "shares_outstanding" in latest_data:
+                data["mstr_shares"] = int(latest_data["shares_outstanding"])
+                print(f"  ✓ MSTR shares outstanding: {data['mstr_shares']:,}")
+
+            strc_web = parse_strc_metrics_from_tracker(latest_data)
+            if strc_web.get("shares") is not None:
+                data["strc_shares"] = strc_web["shares"]
+                print(f"  ✓ STRC shares: {data['strc_shares']:,}")
+            if strc_web.get("dividend_rate") is not None:
+                data["strc_dividend_rate"] = strc_web["dividend_rate"]
+                print(f"  ✓ STRC dividend rate: {data['strc_dividend_rate']:.2%}")
+            if strc_web.get("notional") is not None:
+                data["strc_notional"] = strc_web["notional"]
+            if strc_web.get("effective_yield") is not None:
+                data["strc_effective_yield"] = strc_web["effective_yield"]
+            if strc_web.get("price") is not None:
+                data["strc_price"] = strc_web["price"]
+
+            preferred_series = ["strc", "strd", "stre", "strk", "strf"]
+            for series in preferred_series:
+                metrics_key = f"{series}_metrics"
+                if metrics_key in latest_data:
+                    series_data = latest_data[metrics_key]
+                    if "shares" in series_data:
+                        shares = int(series_data["shares"])
+                        data[f"{series}_shares"] = shares
+                        if series != "strc":
+                            print(f"  ✓ {series.upper()} shares: {shares:,}")
+                        elif "strc_shares" not in data:
+                            data["strc_shares"] = shares
+                            print(f"  ✓ STRC shares: {shares:,}")
+
+            if "stre_metrics" in latest_data:
+                stre_px = stre_price_from_strategy_metrics(latest_data["stre_metrics"])
+                if stre_px is not None:
+                    data["stre_price_eur"], data["stre_price"] = stre_px
+                    fx = latest_data["stre_metrics"].get("current_fx_rate")
+                    if fx is not None:
+                        data["stre_fx_rate"] = float(fx)
+                    print(
+                        f"  ✓ STRE price (strategy.com): €{data['stre_price_eur']:.2f} "
+                        f"→ ${data['stre_price']:,.2f}"
+                    )
+
+            print(f"  ✓ Data date: {latest_data.get('as_of_date', 'N/A')}")
+
+        print("\nFetching convertible debt data from https://www.strategy.com/debt...")
+        try:
+            debt_url = "https://www.strategy.com/debt"
+            try:
+                debt_text = cached_http_get(
+                    debt_url,
+                    headers=STRATEGY_HEADERS,
+                    timeout=15,
+                    cache_key="strategy_com_debt",
+                    force=force_refresh,
+                )
+            except requests.RequestException as exc:
+                print(f"  ✗ Could not fetch from strategy.com/debt: {exc}")
+                debt_text = None
+
+            if debt_text:
+                debt_soup = BeautifulSoup(debt_text, "html.parser")
+                debt_script_tag = debt_soup.find("script", {"id": "__NEXT_DATA__"})
+
+                if debt_script_tag:
+                    debt_next_data = json.loads(debt_script_tag.string)
+                    debt_page_props = debt_next_data.get("props", {}).get("pageProps", {})
+                    data["convertible_debt"] = []
+
+                    if "convertData" in debt_page_props:
+                        data["convertible_debt"] = debt_page_props["convertData"]
+                        print(f"  ✓ Found convertible debt data: {len(data['convertible_debt'])} issues")
+                    else:
+                        for key in debt_page_props.keys():
+                            if "debt" in key.lower() or "bond" in key.lower() or "convert" in key.lower():
+                                debt_data = debt_page_props[key]
+                                if isinstance(debt_data, list):
+                                    data["convertible_debt"] = debt_data
+                                    print(f"  ✓ Found convertible debt data: {len(debt_data)} issues")
+                                    break
+
+                        if not data["convertible_debt"]:
+                            for key, value in debt_page_props.items():
+                                if isinstance(value, list) and len(value) > 0:
+                                    if isinstance(value[0], dict):
+                                        first_item = value[0]
+                                        if any(
+                                            field in first_item
+                                            for field in [
+                                                "principal",
+                                                "face_value",
+                                                "amount",
+                                                "notional",
+                                                "strike_price",
+                                                "strike",
+                                            ]
+                                        ):
+                                            data["convertible_debt"] = value
+                                            print(f"  ✓ Found convertible debt data: {len(value)} issues")
+                                            break
+
+                    if data["convertible_debt"]:
+                        print(f"  ✓ Total convertible debt issues: {len(data['convertible_debt'])}")
+                        for i, debt in enumerate(data["convertible_debt"], 1):
+                            def get_value(d, *keys):
+                                for key in keys:
+                                    if key in d and d[key] is not None:
+                                        val = d[key]
+                                        if isinstance(val, str):
+                                            try:
+                                                val = val.replace("$", "").replace(",", "").strip()
+                                                return float(val)
+                                            except ValueError:
+                                                return val
+                                        return val
+                                return None
+
+                            def search_nested(d, target_keys):
+                                if isinstance(d, dict):
+                                    for key, value in d.items():
+                                        if any(tk.lower() in key.lower() for tk in target_keys):
+                                            if isinstance(value, (int, float)):
+                                                return value
+                                            if isinstance(value, str):
+                                                try:
+                                                    return float(
+                                                        value.replace("$", "").replace(",", "").strip()
+                                                    )
+                                                except ValueError:
+                                                    pass
+                                        if isinstance(value, dict):
+                                            result = search_nested(value, target_keys)
+                                            if result is not None:
+                                                return result
+                                return None
+
+                            principal = get_value(
+                                debt,
+                                "notional",
+                                "principal",
+                                "face_value",
+                                "faceValue",
+                                "amount",
+                                "par_value",
+                                "parValue",
+                                "total_principal",
+                                "totalPrincipal",
+                            )
+                            if principal is None:
+                                principal = search_nested(
+                                    debt, ["notional", "principal", "face", "amount", "par"]
+                                )
+                            principal = principal or 0
+
+                            conversion_price = get_value(
+                                debt,
+                                "strike_price",
+                                "strikePrice",
+                                "strike",
+                                "conversion_price",
+                                "conversionPrice",
+                                "conversion_strike",
+                                "conversionStrike",
+                                "conversion_rate",
+                                "conversionRate",
+                                "conversion",
+                                "conversionPricePerShare",
+                                "conversion_price_per_share",
+                                "share_conversion_price",
+                                "shareConversionPrice",
+                                "price",
+                            )
+                            if conversion_price is None:
+                                conversion_price = search_nested(debt, ["strike", "conversion", "price"])
+                            conversion_price = conversion_price or 0
+
+                            maturity = get_value(debt, "maturity_date", "maturityDate", "maturity") or "N/A"
+                            coupon = get_value(
+                                debt, "coupon", "coupon_rate", "couponRate", "interest_rate", "interestRate"
+                            ) or 0
+
+                            print(
+                                f"    Issue {i}: Principal=${principal:,.0f}, "
+                                f"Conversion Price=${conversion_price:,.2f}, "
+                                f"Coupon={coupon}%, Maturity={maturity}"
+                            )
+                    else:
+                        print("  ⚠ No convertible debt data found in debt page")
+                else:
+                    print("  ✗ Could not find __NEXT_DATA__ script tag in debt page")
+            else:
+                print("  ✗ Could not fetch from strategy.com/debt")
+        except Exception as e:
+            print(f"  ⚠ Error fetching debt data: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+        if data.get("convertible_debt"):
+            total_debt_principal = 0.0
+            total_debt_market = 0.0
+            for debt in data["convertible_debt"]:
+                notional = float(debt.get("notional") or 0)
+                mtm = convert_issue_market_value_usd(debt)
+                debt["market_value_usd"] = mtm
+                if debt.get("last_traded_price") is not None:
+                    debt["market_price_pct_par"] = float(debt["last_traded_price"])
+                total_debt_principal += notional
+                total_debt_market += mtm
+            data["total_convertible_debt_principal"] = total_debt_principal
+            data["total_convertible_debt_market_value"] = total_debt_market
+            print(f"\n  ✓ Total convertible debt principal: ${total_debt_principal:,.0f}")
+            print(f"  ✓ Total convertible debt market value: ${total_debt_market:,.0f}")
+        else:
+            data["total_convertible_debt_principal"] = 0
+            data["total_convertible_debt_market_value"] = 0
+
+        print("\nFetching share conversion data from https://www.strategy.com/shares...")
+        try:
+            shares_url = "https://www.strategy.com/shares"
+            try:
+                shares_text = cached_http_get(
+                    shares_url,
+                    headers=STRATEGY_HEADERS,
+                    timeout=15,
+                    cache_key="strategy_com_shares",
+                    force=force_refresh,
+                )
+            except requests.RequestException as exc:
+                print(f"  ✗ Could not fetch from strategy.com/shares: {exc}")
+                shares_text = None
+
+            if shares_text:
+                shares_soup = BeautifulSoup(shares_text, "html.parser")
+                shares_script_tag = shares_soup.find("script", {"id": "__NEXT_DATA__"})
+
+                if shares_script_tag:
+                    shares_next_data = json.loads(shares_script_tag.string)
+                    shares_page_props = shares_next_data.get("props", {}).get("pageProps", {})
+                    shares_data = shares_page_props.get("shares", [])
+
+                    if shares_data:
+                        most_recent_entry = None
+                        most_recent_date = None
+
+                        for entry in shares_data:
+                            date_str = entry.get("date", "")
+                            if date_str:
+                                try:
+                                    entry_date = datetime.strptime(date_str, "%Y-%m-%d")
+                                    if most_recent_date is None or entry_date > most_recent_date:
+                                        most_recent_date = entry_date
+                                        most_recent_entry = entry
+                                except ValueError:
+                                    pass
+
+                        if most_recent_entry:
+                            print(
+                                f"  ✓ Using most recent shares data: "
+                                f"{most_recent_entry.get('title', 'N/A')} "
+                                f"({most_recent_entry.get('date', 'N/A')})"
+                            )
+
+                            basic_shares = most_recent_entry.get("basic_shares_outstanding", 0) or 0
+                            options_outstanding = most_recent_entry.get("options_outstanding", 0) or 0
+                            rsu_psu_unvested = most_recent_entry.get("rsu_psu_unvested", 0) or 0
+
+                            if basic_shares > 0:
+                                basic_shares_actual = int(basic_shares * 1000)
+                                options_actual = int(options_outstanding * 1000) if options_outstanding > 0 else 0
+                                rsu_psu_actual = int(rsu_psu_unvested * 1000) if rsu_psu_unvested > 0 else 0
+                                # rNAV denominator: equity awards only — converts are claims
+                                data["mstr_shares_basic"] = basic_shares_actual
+                                data["mstr_options_outstanding"] = options_actual
+                                data["mstr_rsu_psu_unvested"] = rsu_psu_actual
+                                data["mstr_shares"] = (
+                                    basic_shares_actual + options_actual + rsu_psu_actual
+                                )
+                                assumed_k = (
+                                    most_recent_entry.get(
+                                        "assumed_diluted_shares_outstanding"
+                                    )
+                                    or 0
+                                )
+                                if assumed_k:
+                                    data["mstr_shares_assumed_diluted"] = int(
+                                        float(assumed_k) * 1000
+                                    )
+                                data["mstr_dilution_policy"] = (
+                                    "basic + options + RSU/PSU; converts and STRK "
+                                    "NOT assumed to convert — debt / preferred claims"
+                                )
+                                print(f"  ✓ MSTR basic shares outstanding: {basic_shares_actual:,}")
+                                if options_actual > 0:
+                                    print(f"  ✓ Options outstanding: {options_actual:,}")
+                                if rsu_psu_actual > 0:
+                                    print(f"  ✓ RSU/PSU unvested: {rsu_psu_actual:,}")
+                                print(f"  ✓ rNAV diluted shares (ex-converts): {data['mstr_shares']:,}")
+
+                            conversion_shares = {
+                                "2028": most_recent_entry.get("converts_shares_2028"),
+                                "2029": most_recent_entry.get("converts_shares_2029"),
+                                "2030": most_recent_entry.get("converts_shares_2030"),
+                                "2030_b": most_recent_entry.get("converts_shares_2030_b"),
+                                "2031": most_recent_entry.get("converts_shares_2031"),
+                                "2032": most_recent_entry.get("converts_shares_2032"),
+                            }
+                        else:
+                            conversion_shares = {}
+
+                        if conversion_shares and data.get("convertible_debt"):
+                            for debt in data["convertible_debt"]:
+                                maturity_date = debt.get("maturity_date", "")
+                                title = debt.get("title", "").lower()
+
+                                if maturity_date:
+                                    year = maturity_date.split("-")[0] if "-" in maturity_date else maturity_date[:4]
+
+                                    if year == "2028":
+                                        shares_val = conversion_shares.get("2028", 0) or 0
+                                        debt["shares_on_conversion"] = shares_val * 1000 if shares_val > 0 else 0
+                                    elif year == "2029":
+                                        shares_val = conversion_shares.get("2029", 0) or 0
+                                        debt["shares_on_conversion"] = shares_val * 1000 if shares_val > 0 else 0
+                                    elif year == "2030":
+                                        if "b" in title or "2030 b" in title:
+                                            shares_val = conversion_shares.get("2030_b", 0) or 0
+                                            debt["shares_on_conversion"] = shares_val * 1000 if shares_val > 0 else 0
+                                        else:
+                                            shares_val = conversion_shares.get("2030", 0) or 0
+                                            debt["shares_on_conversion"] = shares_val * 1000 if shares_val > 0 else 0
+                                    elif year == "2031":
+                                        shares_val = conversion_shares.get("2031", 0) or 0
+                                        debt["shares_on_conversion"] = shares_val * 1000 if shares_val > 0 else 0
+                                    elif year == "2032":
+                                        shares_val = conversion_shares.get("2032", 0) or 0
+                                        debt["shares_on_conversion"] = shares_val * 1000 if shares_val > 0 else 0
+                                    else:
+                                        debt["shares_on_conversion"] = 0
+                                else:
+                                    debt["shares_on_conversion"] = 0
+                    else:
+                        print("  ⚠ No shares data found")
+                else:
+                    print("  ✗ Could not find __NEXT_DATA__ script tag in shares page")
+            else:
+                print("  ✗ Could not fetch from strategy.com/shares")
+        except Exception as e:
+            print(f"  ⚠ Error fetching shares data: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+    except Exception as e:
+        print(f"  ✗ Error fetching from strategy.com: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+    return data
+
+
+fetch_microstrategy_data = fetch_mstr_strategy_raw
+
+
+def enrich_mstr_yahoo_prices(
+    data: dict,
+    output_dir: Path = OUTPUT_DIR,
+    *,
+    force_refresh: bool = False,
+) -> dict:
+    """
+    Enrich data dict with Yahoo prices for MSTR and preferred tickers.
+    Sets data['btc_price'] and returns the mutated dict.
+    """
+    print("\nFetching current prices...")
+    btc_price = load_btc_spot(output_dir, force_refresh=force_refresh)
+
+    # Force fresh STRE attempt — don't trust stale stre_price from cached raw file.
+    data.pop("stre_price", None)
+    data.pop("stre_price_eur", None)
+    apply_stre_price_from_strategy(data, force_refresh=force_refresh)
+    if data.get("stre_price"):
+        print(
+            f"  ✓ STRE price from strategy.com: €{data.get('stre_price_eur', 0):.2f} "
+            f"→ ${data['stre_price']:,.2f} (fx {data.get('stre_fx_rate', 0):.4f})"
+        )
+
+    mstr_cached = load_json_price(output_dir / "mstr_data.json")
+    if mstr_cached is not None:
+        data["mstr_price"] = mstr_cached
+        print(f"  ✓ MSTR price from {output_dir / 'mstr_data.json'}: ${mstr_cached:,.2f}")
+    else:
+        print("\nFetching MSTR stock price from Yahoo Finance...")
+        try:
+            mstr_ticker = yf.Ticker("MSTR")
+            mstr_info = mstr_ticker.info
+            mstr_price_data = cached_yahoo_history("MSTR", "1d", force_refresh=force_refresh)
+            if mstr_price_data is not None and len(mstr_price_data) > 0:
+                data["mstr_price"] = float(mstr_price_data["Close"].iloc[-1])
+                print(f"  ✓ MSTR price: ${data['mstr_price']:,.2f}")
+            if "mstr_shares" not in data or data.get("mstr_shares", 0) == 0:
+                if "sharesOutstanding" in mstr_info:
+                    data["mstr_shares"] = int(mstr_info["sharesOutstanding"])
+                    print(f"  ✓ MSTR shares outstanding (from Yahoo): {data['mstr_shares']:,}")
+        except Exception as e:
+            print(f"  ⚠ Error fetching MSTR data: {e}")
+
+    strc_cached = load_json_price(output_dir / "strc_data.json")
+    if strc_cached is not None:
+        data["strc_price"] = strc_cached
+        print(f"  ✓ STRC price from {output_dir / 'strc_data.json'}: ${strc_cached:,.2f}")
+
+    preferred_series = ["strc", "strd", "strk", "strf"]
+    for series in preferred_series:
+        price_key = f"{series}_price"
+        if price_key not in data or data.get(price_key, 0) == 0:
+            print(f"\nFetching {series.upper()} price from Yahoo Finance...")
+            try:
+                price_data = cached_yahoo_history(series.upper(), "1d", force_refresh=force_refresh)
+                if price_data is not None and len(price_data) > 0:
+                    data[price_key] = float(price_data["Close"].iloc[-1])
+                    print(f"  ✓ {series.upper()} price: ${data[price_key]:,.2f}")
+                else:
+                    print(f"  ⚠ Could not fetch {series.upper()} price from Yahoo Finance")
+            except Exception as e:
+                print(f"  ⚠ Error fetching {series.upper()} price: {e}")
+
+    if not data.get("stre_price"):
+        apply_stre_price_from_strategy(data, force_refresh=force_refresh)
+        if data.get("stre_price"):
+            print(
+                f"  ✓ STRE price (strategy.com): €{data.get('stre_price_eur', 0):.2f} "
+                f"→ ${data['stre_price']:,.2f}"
+            )
+        else:
+            # LuxSE only, not on Yahoo. Use last persisted price from enriched file if available.
+            eur_usd = data.get("stre_fx_rate") or 0.0
+            if not eur_usd:
+                eur_usd_price = yahoo_spot_price("EURUSD=X", force_refresh=force_refresh)
+                eur_usd = eur_usd_price if eur_usd_price else 1.10
+                data["stre_fx_rate"] = eur_usd
+
+            prev_enriched_path = output_dir / "mstr_enriched_data.json"
+            last_price_usd = None
+            last_price_eur = None
+            if prev_enriched_path.is_file():
+                try:
+                    prev = json.load(prev_enriched_path.open())
+                    last_price_usd = prev.get("stre_price")
+                    last_price_eur = prev.get("stre_price_eur")
+                except Exception:
+                    pass
+
+            if last_price_eur and last_price_usd:
+                data["stre_price_eur"] = last_price_eur
+                data["stre_price"] = last_price_usd
+                data["stre_price_stale"] = True
+                print(
+                    f"  ⚠ STRE price stale — no live source available. "
+                    f"Using last known: €{last_price_eur:.2f} = ${last_price_usd:,.2f} "
+                    f"(run fetch_mstr_treasury.py --force-refresh to update)"
+                )
+            else:
+                data["stre_price_eur"] = STRE_MARKET_PRICE_EUR
+                data["stre_price"] = STRE_MARKET_PRICE_EUR * eur_usd
+                data["stre_price_stale"] = True
+                print(
+                    f"  ⚠ STRE price unavailable — using IPO market price "
+                    f"€{STRE_MARKET_PRICE_EUR:.2f} × {eur_usd:.4f} = ${data['stre_price']:,.2f}"
+                )
+
+    data["btc_price"] = btc_price
+    return data
+
+
+def build_hedge_treasury_json(raw: dict, enriched: dict, btc_price: float) -> dict:
+    """Normalize to slim hedge schema for mstr_options_hedge.ipynb."""
+    cash = float(enriched.get("cash") or raw.get("cash") or 0)
+    annual_div_musd = float(
+        enriched.get("annual_dividends") if enriched.get("annual_dividends") is not None
+        else raw.get("annual_dividends") or 0
+    )
+    pref_annual_usd = float(
+        enriched.get("total_preferred_annual_dividends_usd")
+        if enriched.get("total_preferred_annual_dividends_usd") is not None
+        else raw.get("total_preferred_annual_dividends_usd") or 0
+    )
+    strc_shares = int(enriched.get("strc_shares") or raw.get("strc_shares") or 0)
+    strc_price = float(enriched.get("strc_price") or 0)
+    strc_notional = enriched.get("strc_notional") if enriched.get("strc_notional") is not None else raw.get("strc_notional")
+    if strc_notional is None:
+        strc_notional = float(strc_shares * 100)
+    else:
+        strc_notional = float(strc_notional)
+
+    strc_div = enriched.get("strc_dividend_rate") if enriched.get("strc_dividend_rate") is not None else raw.get("strc_dividend_rate")
+    strc_div_rate = float(strc_div or 0)
+    strc_yield = enriched.get("strc_effective_yield") if enriched.get("strc_effective_yield") is not None else raw.get("strc_effective_yield")
+    strc_effective_yield = float(strc_yield or 0)
+
+    strf_shares = int(enriched.get("strf_shares") or raw.get("strf_shares") or 0)
+    strf_price = float(enriched.get("strf_price") or 0)
+    debt_principal = float(
+        enriched.get("total_convertible_debt_principal")
+        if enriched.get("total_convertible_debt_principal") is not None
+        else raw.get("total_convertible_debt_principal") or 0
+    )
+    debt_market = float(
+        enriched.get("total_convertible_debt_market_value")
+        if enriched.get("total_convertible_debt_market_value") is not None
+        else raw.get("total_convertible_debt_market_value")
+        if raw.get("total_convertible_debt_market_value") is not None
+        else debt_principal
+    )
+
+    return {
+        "btc_holdings": int(enriched.get("bitcoin_holdings") or raw.get("bitcoin_holdings") or 0),
+        "btc_price": float(btc_price),
+        "usd_reserve_usd": cash,
+        "annual_dividends_musd": annual_div_musd,
+        "total_preferred_annual_dividends_usd": pref_annual_usd,
+        "convertible_debt_principal": debt_principal,
+        "convertible_debt_market_value": debt_market,
+        "strc_shares": strc_shares,
+        "strc_notional": strc_notional,
+        "strc_price": strc_price,
+        "strc_dividend_rate": strc_div_rate,
+        "strc_effective_yield": strc_effective_yield,
+        "strf_shares": strf_shares,
+        "strf_price": strf_price,
+        "strf_market_value": strf_shares * strf_price,
+        "timestamp": datetime.now().isoformat(),
+        "source": "https://www.strategy.com/",
+    }
+
+
+def load_mstr_strategy_raw(
+    output_dir: Path = OUTPUT_DIR,
+    *,
+    force_refresh: bool = False,
+) -> dict:
+    """Parse strategy.com data via the 1h HTTP cache; save result to disk."""
+    data = fetch_mstr_strategy_raw(force_refresh=force_refresh)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = output_dir / "mstr_strategy_raw.json"
+    with raw_path.open("w") as f:
+        json.dump(data, f, indent=2)
+    print(f"  ✓ Saved strategy.com raw data to {raw_path}")
+    return data
+
+
+def load_mstr_enriched(
+    output_dir: Path = OUTPUT_DIR,
+    *,
+    max_age_hours: float = 24.0,
+) -> dict:
+    """Load fully enriched MSTR data from disk. Run fetch_mstr_treasury.py to refresh."""
+    import os
+    import time
+
+    enriched_path = output_dir / "mstr_enriched_data.json"
+    if not enriched_path.is_file():
+        raise FileNotFoundError(
+            f"Enriched data not found at {enriched_path}. "
+            "Run: python fetch_mstr_treasury.py"
+        )
+    age_hours = (time.time() - os.path.getmtime(enriched_path)) / 3600
+    if age_hours > max_age_hours:
+        print(
+            f"  ⚠ Enriched data is {age_hours:.1f}h old (>{max_age_hours:.0f}h). "
+            "Run: python fetch_mstr_treasury.py"
+        )
+    with enriched_path.open() as f:
+        data = json.load(f)
+    fetched_at = data.get("_fetched_at", "unknown")[:19]
+    print(f"  ✓ Loaded enriched MSTR data from {enriched_path} (fetched: {fetched_at})")
+    return data
+
+
+def fetch_and_save_mstr_treasury(
+    output_path: Path | None = None,
+    output_dir: Path | None = None,
+    *,
+    force_refresh: bool = False,
+) -> dict:
+    """Fetch strategy.com data, enrich prices, write hedge JSON and enriched data."""
+    ensure_output_dirs()
+    out_dir = output_dir if output_dir is not None else OUTPUT_DIR
+    raw = load_mstr_strategy_raw(out_dir, force_refresh=force_refresh)
+    enriched = enrich_mstr_yahoo_prices(raw, output_dir=out_dir, force_refresh=force_refresh)
+    btc_price = float(enriched.get("btc_price") or load_btc_spot(out_dir, force_refresh=force_refresh, log=False))
+    hedge = build_hedge_treasury_json(raw, enriched, btc_price)
+
+    out_path = Path(output_path) if output_path is not None else out_dir / "mstr_treasury_extracted_data.json"
+    with out_path.open("w") as f:
+        json.dump(hedge, f, indent=2)
+    print(f"\n✓ Saved hedge treasury data to {out_path}")
+
+    # Save full enriched dict for MSTR.ipynb (all prices, shares, holdings, debt).
+    enriched["_fetched_at"] = datetime.now().isoformat()
+    enriched_path = out_dir / "mstr_enriched_data.json"
+    with enriched_path.open("w") as f:
+        json.dump(enriched, f, indent=2, default=str)
+    print(f"✓ Saved enriched data to {enriched_path}")
+
+    return hedge
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fetch MSTR treasury data from strategy.com")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help=f"Output JSON path (default: {OUTPUT_DIR / 'mstr_treasury_extracted_data.json'})",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=OUTPUT_DIR,
+        help=f"Output directory when --output is omitted (default: {OUTPUT_DIR})",
+    )
+    parser.add_argument(
+        "--force-refresh",
+        "--no-cache",
+        action="store_true",
+        dest="force_refresh",
+        help="Bypass cache and refetch all network data",
+    )
+    args = parser.parse_args()
+    fetch_and_save_mstr_treasury(
+        output_path=args.output,
+        output_dir=args.output_dir,
+        force_refresh=args.force_refresh,
+    )

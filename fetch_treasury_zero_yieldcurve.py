@@ -156,10 +156,26 @@ def _parse_fredgraph_csv(text: str) -> tuple[str, dict[str, float]]:
 
 
 def fetch_fred_cm_yields(session: requests.Session | None = None) -> tuple[str, dict[str, float]]:
-    sess = session or requests.Session()
-    r = sess.get(FREDGRAPH_URL, timeout=30)
-    r.raise_for_status()
-    return _parse_fredgraph_csv(r.text)
+    """Latest DGS yields from FRED fredgraph.csv (cached; full history CSV can be slow)."""
+    from data_cache import get_or_fetch
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+    }
+
+    def fetch() -> dict:
+        sess = session or requests.Session()
+        print("   Downloading FRED DGS yields (fredgraph.csv — can take 10–30s)...")
+        r = sess.get(FREDGRAPH_URL, headers=headers, timeout=45)
+        r.raise_for_status()
+        record_date, par = _parse_fredgraph_csv(r.text)
+        return {"as_of_date": record_date, "par_yields_decimal": par}
+
+    cached = get_or_fetch("fred_dgs_yields_csv", fetch)
+    return cached["as_of_date"], dict(cached["par_yields_decimal"])
 
 
 def _coupon_payment_times(T_mat: float) -> list[float]:

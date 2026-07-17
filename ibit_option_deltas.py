@@ -7,7 +7,7 @@ Enriches each contract in ibit_data.json (and mirrors ibit_options.json) with:
 
 Gamma Γ = ∂²V/∂S² = ∂Δ/∂S. Rho = ∂V/∂r (per 1.0 continuous r; same σ; central bump in r).
 
-Run after fetch_data (or whenever chains are updated):
+Normally run automatically via fetch_data.py; standalone:
   python ibit_option_deltas.py
 
 By default loads yield_curve.json from fetch_data.py; if missing, pulls FRED live.
@@ -337,64 +337,73 @@ def save_json(path: Path, data: Any) -> None:
         json.dump(data, f, indent=2)
 
 
-def main() -> None:
-    p = argparse.ArgumentParser(description="Add American binomial delta (from mid) to IBIT JSON.")
-    p.add_argument("--ibit-data", type=Path, default=DEFAULT_OUTPUT_DIR / "ibit_data.json")
-    p.add_argument("--ibit-options", type=Path, default=DEFAULT_OUTPUT_DIR / "ibit_options.json")
-    p.add_argument(
-        "--flat-risk-free",
-        type=float,
-        default=None,
-        metavar="R",
-        help="Skip FRED/Treasury curve and use this constant continuous rate (e.g. 0.042)",
-    )
-    p.add_argument(
-        "--risk-free",
-        type=float,
-        default=None,
-        help="Deprecated alias for --flat-risk-free when curve fetch fails (ignored if curve ok)",
-    )
-    p.add_argument("--div-yield", type=float, default=DEFAULT_DIV_YIELD, help="Continuous dividend yield on IBIT")
-    p.add_argument("--tree-steps", type=int, default=DEFAULT_TREE_STEPS, help="Binomial steps (speed vs accuracy)")
-    p.add_argument(
-        "--yield-curve",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR / "yield_curve.json",
-        help=f"Path from fetch_data.py (default: {DEFAULT_OUTPUT_DIR / 'yield_curve.json'})",
-    )
-    p.add_argument("--dry-run", action="store_true", help="Compute but do not write files")
-    p.add_argument("-q", "--quiet", action="store_true", help="Suppress per-expiration progress lines")
-    args = p.parse_args()
+def is_options_chain_enriched(data_path: Path) -> bool:
+    """True if on-disk ticker JSON already has delta/IV on option rows."""
+    if not data_path.is_file():
+        return False
+    try:
+        data = load_json(data_path)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return False
+    od = data.get("options_data")
+    if not isinstance(od, dict):
+        return False
+    checked = 0
+    with_delta = 0
+    for exp_str in _iso_expiration_keys(od):
+        block = od[exp_str]
+        for side in ("calls", "puts"):
+            for row in block.get(side) or []:
+                if "strike" not in row:
+                    continue
+                checked += 1
+                if row.get("delta") is not None:
+                    with_delta += 1
+    return checked > 0 and with_delta > 0
 
-    flat_r = args.flat_risk_free
-    if args.risk_free is not None and flat_r is None:
-        flat_r = args.risk_free
 
-    if not args.ibit_data.is_file():
-        print(f"Missing {args.ibit_data}", file=sys.stderr)
-        sys.exit(1)
+def enrich_options_files(
+    data_path: Path,
+    options_path: Path,
+    *,
+    yield_curve_path: Path | None = None,
+    flat_risk_free: float | None = None,
+    div_yield: float | None = None,
+    tree_steps: int = DEFAULT_TREE_STEPS,
+    dry_run: bool = False,
+    quiet: bool = False,
+) -> tuple[int, int]:
+    """Add delta/IV/gamma to one ticker data + options JSON pair. Returns (ok, skipped)."""
+    if not data_path.is_file():
+        raise FileNotFoundError(f"Missing {data_path}")
 
-    data = load_json(args.ibit_data)
+    data = load_json(data_path)
     spot = data.get("current_price")
     if spot is None or not math.isfinite(float(spot)):
-        print("ibit_data.json has no valid current_price", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError(f"{data_path.name} has no valid current_price")
     S = float(spot)
+
+    if div_yield is not None:
+        q = float(div_yield)
+    else:
+        raw_q = data.get("dividend_yield")
+        q = float(raw_q) if raw_q is not None else DEFAULT_DIV_YIELD
 
     ts = data.get("timestamp") or datetime.now(timezone.utc).isoformat()
     valuation = _parse_valuation_datetime(str(ts))
 
     od = data.get("options_data")
     if not isinstance(od, dict):
-        print("ibit_data.json missing options_data", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError(f"{data_path.name} missing options_data")
 
+    yc_path = yield_curve_path if yield_curve_path is not None else DEFAULT_OUTPUT_DIR / "yield_curve.json"
+    flat_r = flat_risk_free
     curve: TreasuryZeroCurve | None = None
     curve_how: str | None = None
     if flat_r is None:
-        curve, err_file = load_yield_curve_json(args.yield_curve)
+        curve, err_file = load_yield_curve_json(yc_path)
         if curve is not None:
-            curve_how = f"{args.yield_curve} (saved)"
+            curve_how = f"{yc_path} (saved)"
         else:
             sess = requests.Session()
             curve, err_live = try_build_treasury_zero_curve(session=sess)
@@ -420,29 +429,192 @@ def main() -> None:
         valuation=valuation,
         curve=curve,
         flat_r=fallback_rate,
-        q=args.div_yield,
-        n_steps=args.tree_steps,
-        log=not args.quiet,
+        q=q,
+        n_steps=tree_steps,
+        log=not quiet,
     )
-    print(f"Spot: {S:.4f}  valuation: {valuation.isoformat()}")
-    if curve is not None:
-        print(f"Treasury curve: {curve_how}  FRED as-of: {curve.as_of_date}")
-        data["treasury_zero_curve"] = curve.to_json_dict()
-    else:
-        print(f"Flat risk-free (continuous): {fallback_rate:.6f}")
-    print(f"Div yield: {args.div_yield:.4f}  tree steps: {args.tree_steps}")
-    print(f"Contracts with delta: {ok}  without / skipped: {skipped}")
+    if not quiet:
+        print(f"Spot: {S:.4f}  valuation: {valuation.isoformat()}")
+        if curve is not None:
+            print(f"Treasury curve: {curve_how}  FRED as-of: {curve.as_of_date}")
+            data["treasury_zero_curve"] = curve.to_json_dict()
+        else:
+            print(f"Flat risk-free (continuous): {fallback_rate:.6f}")
+        print(f"Div yield: {q:.4f}  tree steps: {tree_steps}")
+        print(f"Contracts with delta: {ok}  without / skipped: {skipped}")
 
-    if args.dry_run:
+    if dry_run:
+        return ok, skipped
+
+    if curve is not None:
+        data["treasury_zero_curve"] = curve.to_json_dict()
+
+    save_json(data_path, data)
+    if options_path.is_file():
+        save_json(options_path, od)
+    return ok, skipped
+
+
+def _enrich_one_ticker(
+    ticker: str,
+    output_dir: Path,
+    yc: Path,
+    *,
+    tree_steps: int,
+    quiet: bool,
+) -> tuple[str, int, int] | None:
+    data_path = output_dir / f"{ticker}_data.json"
+    if not data_path.is_file():
+        return None
+    options_path = output_dir / f"{ticker}_options.json"
+    ok, skipped = enrich_options_files(
+        data_path,
+        options_path,
+        yield_curve_path=yc,
+        tree_steps=tree_steps,
+        quiet=quiet,
+    )
+    return ticker, ok, skipped
+
+
+def enrich_all_option_chains(
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
+    *,
+    tickers: tuple[str, ...] = ("mstr", "strc", "ibit"),
+    yield_curve_path: Path | None = None,
+    quiet: bool = True,
+    tree_steps: int = DEFAULT_TREE_STEPS,
+    parallel: bool = False,
+    skip_tickers: frozenset[str] | set[str] | None = None,
+) -> None:
+    """Run delta/IV enrichment for each ticker whose data JSON exists."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    yc = yield_curve_path if yield_curve_path is not None else output_dir / "yield_curve.json"
+    skip = frozenset(skip_tickers or ())
+    skipped = [t for t in tickers if t in skip and (output_dir / f"{t}_data.json").is_file()]
+    active = [
+        t
+        for t in tickers
+        if t not in skip and (output_dir / f"{t}_data.json").is_file()
+    ]
+    if not active and not skipped:
         return
 
-    save_json(args.ibit_data, data)
+    print("\n" + "=" * 70)
+    print("ENRICHING OPTIONS (delta / IV / gamma)")
+    print("=" * 70)
+    if skipped:
+        print(f"Skipping {', '.join(t.upper() for t in skipped)} (cache hit, already enriched)")
+    if not active:
+        return
 
-    if args.ibit_options.is_file():
-        save_json(args.ibit_options, od)
-        print(f"Updated {args.ibit_options}")
+    def report(result: tuple[str, int, int] | None) -> None:
+        if result is None:
+            return
+        ticker, ok, skipped = result
+        print(f"\n{ticker.upper()}:")
+        print(f"   ✓ {ok} contracts enriched, {skipped} skipped")
+        options_path = output_dir / f"{ticker}_options.json"
+        if options_path.is_file():
+            print(f"   ✓ Updated {ticker}_data.json, {options_path.name}")
 
-    print(f"Updated {args.ibit_data}")
+    if parallel and len(active) > 1:
+        print(f"Running {len(active)} legs in parallel...")
+        with ThreadPoolExecutor(max_workers=len(active)) as pool:
+            futures = [
+                pool.submit(
+                    _enrich_one_ticker,
+                    ticker,
+                    output_dir,
+                    yc,
+                    tree_steps=tree_steps,
+                    quiet=quiet,
+                )
+                for ticker in active
+            ]
+            for fut in as_completed(futures):
+                report(fut.result())
+    else:
+        for ticker in active:
+            report(_enrich_one_ticker(ticker, output_dir, yc, tree_steps=tree_steps, quiet=quiet))
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Add American binomial delta (from mid) to IBIT JSON.")
+    p.add_argument("--ibit-data", type=Path, default=DEFAULT_OUTPUT_DIR / "ibit_data.json")
+    p.add_argument("--ibit-options", type=Path, default=DEFAULT_OUTPUT_DIR / "ibit_options.json")
+    p.add_argument(
+        "--data",
+        type=Path,
+        default=None,
+        help="Alias for --ibit-data (e.g. output/mstr_data.json)",
+    )
+    p.add_argument(
+        "--options",
+        type=Path,
+        default=None,
+        help="Alias for --ibit-options (e.g. output/mstr_options.json)",
+    )
+    p.add_argument(
+        "--flat-risk-free",
+        type=float,
+        default=None,
+        metavar="R",
+        help="Skip FRED/Treasury curve and use this constant continuous rate (e.g. 0.042)",
+    )
+    p.add_argument(
+        "--risk-free",
+        type=float,
+        default=None,
+        help="Deprecated alias for --flat-risk-free when curve fetch fails (ignored if curve ok)",
+    )
+    p.add_argument(
+        "--div-yield",
+        type=float,
+        default=None,
+        help="Continuous dividend yield (default: dividend_yield field in data JSON, else 0)",
+    )
+    p.add_argument("--tree-steps", type=int, default=DEFAULT_TREE_STEPS, help="Binomial steps (speed vs accuracy)")
+    p.add_argument(
+        "--yield-curve",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR / "yield_curve.json",
+        help=f"Path from fetch_data.py (default: {DEFAULT_OUTPUT_DIR / 'yield_curve.json'})",
+    )
+    p.add_argument("--dry-run", action="store_true", help="Compute but do not write files")
+    p.add_argument("-q", "--quiet", action="store_true", help="Suppress per-expiration progress lines")
+    args = p.parse_args()
+    if args.data is not None:
+        args.ibit_data = args.data
+    if args.options is not None:
+        args.ibit_options = args.options
+
+    flat_r = args.flat_risk_free
+    if args.risk_free is not None and flat_r is None:
+        flat_r = args.risk_free
+
+    try:
+        ok, skipped = enrich_options_files(
+            args.ibit_data,
+            args.ibit_options,
+            yield_curve_path=args.yield_curve,
+            flat_risk_free=flat_r,
+            div_yield=args.div_yield,
+            tree_steps=args.tree_steps,
+            dry_run=args.dry_run,
+            quiet=args.quiet,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+
+    if not args.quiet:
+        print(f"Contracts with delta: {ok}  without / skipped: {skipped}")
+    if not args.dry_run:
+        print(f"Updated {args.ibit_data}")
+        if args.ibit_options.is_file():
+            print(f"Updated {args.ibit_options}")
 
 
 if __name__ == "__main__":
