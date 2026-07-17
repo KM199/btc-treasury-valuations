@@ -2,9 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Human / portfolio docs:** [`docs/`](docs/) (overview, architecture, modules, valuation, capital-structure, data-sources) and [`README.md`](README.md). Prefer those for narrative; keep this file as agent ops.
+
 ## Project Overview
 
-STRC Sim is a **Bitcoin Treasury Valuation System** that models and values SATA preferred stock issued by a Bitcoin Treasury Company. It runs Monte Carlo simulations of Bitcoin price paths over 100 years to determine dividend sustainability and NPV-based fair value per share.
+STRC Sim is a **Bitcoin Treasury Valuation System** that models and values SATA preferred stock issued by a Bitcoin Treasury Company. It runs Monte Carlo simulations of Bitcoin price paths over 100 years to determine dividend sustainability and NPV-based fair value per share. The portfolio UI lives under `web/`; site JSON is produced by `export_site_data.py`.
 
 ## Environment Setup
 
@@ -24,11 +26,17 @@ Generated artifacts use a flat **`output/`** directory (JSON, `.npy` / `.npz`, v
 The analysis runs in four sequential stages:
 
 ```bash
-# 1. Fetch live market data (writes JSON under output/)
+# 1. Fetch everything (Yahoo options, BTC history, yield curve, MSTR treasury, ASST/SATA, option deltas)
 python fetch_data.py
 
-# 1b. Fetch Strive treasury snapshot (output/treasury_extracted_data.json)
-python fetch_treasury_api.py
+# Optional: single-ticker or skip legs
+# python fetch_data.py --only strc
+# python fetch_data.py --skip-asst          # hedge-only (no SATA valuation inputs)
+# python fetch_data.py --skip-deltas        # raw chains only (faster)
+# python fetch_data.py --force-refresh      # bypass the 1-hour network cache
+# python fetch_mstr_treasury.py             # standalone MSTR treasury refresh
+# python fetch_asst_api.py                  # standalone ASST refresh
+# python ibit_option_deltas.py              # standalone delta enrichment
 
 # 2. Generate Bitcoin price paths (~1GB under output/, takes several minutes)
 python btc_price_paths.py
@@ -44,17 +52,39 @@ python html_report_generator.py [--input output/sata_valuation_results.json] \
 
 `--optimization-level 2` (default) enables early termination for insolvent simulation paths, which dramatically reduces runtime.
 
+## Website
+
+```bash
+python export_site_data.py   # → web/public/data/*.json
+cd web && npm install && npm run dev
+```
+
+Human docs: [`docs/`](docs/). Site app: [`web/`](web/). CI: `.github/workflows/` (15-min market snapshot, daily valuation).
+
+## Tests
+
+```bash
+# Run all tests (requires output/ibit_data.json — run fetch_data.py first)
+python -m pytest test_ibit_option_deltas_convexity.py -v
+
+# Run a single test
+python -m pytest test_ibit_option_deltas_convexity.py::TestIbitOptionDeltasConvexity::test_gamma_magnitude_atm_strike -v
+```
+
+`test_ibit_option_deltas_convexity.py` tests the CRR binomial tree implementation in `ibit_option_deltas.py`: Greek magnitudes (Δ, Γ, ρ), convexity of parallel spot+rate shocks, and long-put P&L direction. Tests skip automatically if `output/ibit_data.json` is absent.
+
 ## Architecture
 
 ### Data Flow
 
 ```
 fetch_data.py
-    → output/mstr_data.json, output/ibit_data.json, output/btc_historical_data.json, output/yield_curve.json, etc.
+    → output/mstr_data.json, output/strc_data.json, output/ibit_data.json, output/btc_historical_data.json, output/yield_curve.json, etc.
     (yield curve bootstrap: fetch_treasury_zero_yieldcurve.py)
 
-fetch_treasury_api.py
-    → output/treasury_extracted_data.json  (BTCC holdings, cash, shares outstanding)
+fetch_data.py (full run) also calls:
+    fetch_mstr_treasury.py → mstr_strategy_raw.json, mstr_treasury_extracted_data.json
+    fetch_asst_api.py      → treasury_extracted_data.json  (ASST/SATA holdings, cash, shares)
 
 btc_price_paths.py
     → output/btc_price_paths_scenarios_price_paths.npy   (~1GB uncompressed)
@@ -81,7 +111,7 @@ All model parameters live in the `Configuration` class at the top of `sata_valua
 1. **Baseline**: 10,000 simulations at the current BTC price
 2. **Multi-scenario**: Same 10,000 paths tested at 21 different BTC starting prices (±10%)
 3. **Threshold sensitivity**: How the dividend suspension threshold multiplier affects NPV
-4. **BTC credit ratio sensitivity**: Dynamic analysis based on current holdings ratio
+4. **Dividend rate sensitivity**: How the stated coupon rate affects NPV
 
 The inner simulation loop (`simulate_dividend_path`) is JIT-compiled with Numba when available, falling back to pure Python silently. Parallel execution uses `ProcessPoolExecutor`; if multiprocessing fails it falls back to serial.
 
@@ -100,24 +130,30 @@ All raster charts belong under **`output/plots/`**. Defaults from `btc_price_pat
 ### Dividend Suspension Logic
 
 Each monthly simulation step:
-1. Calculate adjusted BTC credit = `(btc_holdings × price + cash) / total_par_value`
-2. If credit > suspension threshold multiplier: attempt to pay dividend from cash, then sell BTC if needed
-3. If insufficient: suspend dividend and start compounding unpaid amount (12.5%–20% annual, +25bps/month, capped at 20%)
+1. Pay accumulated unpaid dividends from **cash first** (always); remaining balance from BTC only if BTC mark-to-market ≥ threshold (typically 1× par)
+2. Pay the current monthly dividend from **cash first** (always); sell BTC for any shortfall only if BTC mark-to-market ≥ threshold
+3. If the full monthly dividend is not paid: compound the unpaid amount (12.5%–20% annual, +25bps/month, capped at 20%)
 4. Track cumulative NPV using pre-computed monthly discount factors
 
-The suspension threshold multiplier is the key sensitivity parameter — tested from 0× to 2× par value.
+Cash is never blocked by the suspension threshold — only BTC sales are. The threshold multiplier (sensitivity-tested from 0× to 2× par) gates Bitcoin liquidations only.
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `strc_paths.py` | `PROJECT_ROOT`, `OUTPUT_DIR`, `REPORTS_DIR`, `PLOTS_DIR`, `PLOTS_MATRIX_DIR`, `PLOTS_PERF_DIR`, `ensure_output_dirs()` |
+| `strc_paths.py` | `PROJECT_ROOT`, `OUTPUT_DIR`, `CACHE_DIR`, `REPORTS_DIR`, `PLOTS_DIR`, `PLOTS_MATRIX_DIR`, `PLOTS_PERF_DIR`, `ensure_output_dirs()` |
 | `sata_valuation.py` | Main engine: Configuration class, simulation logic, all four analyses |
 | `btc_price_paths.py` | Monte Carlo BTC price generation with manually tunable distribution parameters |
 | `html_report_generator.py` | Reads results JSON, produces self-contained HTML report under `reports/` |
-| `fetch_data.py` | Fetches live data from Yahoo Finance; writes JSON under `output/` |
+| `fetch_data.py` | Single entry point: Yahoo options, BTC history, yield curve, treasury, option deltas |
 | `fetch_treasury_zero_yieldcurve.py` | FRED yields → bootstrapped Treasury zero curve (`build_treasury_zero_curve`); used by `fetch_data.py` and `ibit_option_deltas.py` |
-| `fetch_treasury_api.py` | Strive/strategytracker treasury JSON → `output/treasury_extracted_data.json` |
+| `fetch_asst_api.py` | ASST/SATA from strategytracker → `output/treasury_extracted_data.json` |
+| `fetch_mstr_treasury.py` | MSTR treasury from strategy.com → `output/mstr_treasury_extracted_data.json` |
+| `data_cache.py` | TTL-based network cache (1h default) stored under `output/cache/`; `get_or_fetch()` is the main entry point for all fetch scripts |
+| `fetch_yahoo.py` | Shared cached Yahoo Finance helpers (`yahoo_spot_price`, `load_btc_spot`) used across fetch scripts |
+| `mstr_hedge_helpers.py` | Shared helpers for `mstr_options_hedge.ipynb`: theta, hedge sizing, $10k book P&L shocks |
+| `mstr_liquidation.py` | STRC liquidation waterfall math: senior-claim wipeout band and MSTR/STRC put-hedge sizing |
+| `check_baseline.py` | Utility: verify that the baseline scenario is present in `output/sata_valuation_results.json` |
 | `output/treasury_extracted_data.json` | Runtime configuration source — overrides Configuration defaults when present |
 
 ## Distribution Parameters
