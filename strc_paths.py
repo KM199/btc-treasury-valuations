@@ -11,6 +11,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = PROJECT_ROOT / "output"
+CACHE_DIR = OUTPUT_DIR / "cache"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 PLOTS_DIR = OUTPUT_DIR / "plots"
 PLOTS_MATRIX_DIR = PLOTS_DIR / "matrix"
@@ -18,8 +19,9 @@ PLOTS_PERF_DIR = PLOTS_DIR / "perf"
 
 
 def ensure_output_dirs() -> None:
-    """Create output/, reports/, and output/plots/ (+ matrix/perf) if missing."""
+    """Create output/, cache/, reports/, and output/plots/ (+ matrix/perf) if missing."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
     PLOTS_MATRIX_DIR.mkdir(parents=True, exist_ok=True)

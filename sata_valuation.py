@@ -48,6 +48,56 @@ warnings.filterwarnings('ignore')
 np.random.seed(42)
 
 # ============================================================================
+# TREASURY DATA LOADING
+# ============================================================================
+
+def _parse_treasury_extracted_data(treasury_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Map ``treasury_extracted_data.json`` fields to Configuration override keys."""
+    data: Dict[str, Any] = {}
+
+    if 'btc_holdings' in treasury_data:
+        data['bitcoin_holdings'] = treasury_data['btc_holdings']
+
+    if 'cash' in treasury_data:
+        data['cash'] = treasury_data['cash']
+
+    if 'sata_shares' in treasury_data:
+        data['sata_shares'] = treasury_data['sata_shares']
+
+    if 'sata_dividend_rate' in treasury_data:
+        dividend_rate = treasury_data['sata_dividend_rate']
+        if dividend_rate > 1:
+            dividend_rate = dividend_rate / 100.0
+        data['sata_dividend_rate'] = dividend_rate
+
+    if 'sata_price' in treasury_data:
+        data['sata_current_price'] = treasury_data['sata_price']
+
+    return data
+
+
+def _load_treasury_defaults(data_dir: Optional[str] = None) -> Dict[str, Any]:
+    """Load treasury overrides from ``<data_dir>/treasury_extracted_data.json`` (silent)."""
+    try:
+        from preferred_valuation import load_sata_issuer
+
+        root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
+        issuer = load_sata_issuer(root)
+        return issuer.to_configuration_overrides()
+    except Exception:
+        root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
+        treasury_data_file = root / "treasury_extracted_data.json"
+        if not treasury_data_file.is_file():
+            return {}
+        try:
+            with open(treasury_data_file, "r") as f:
+                treasury_data = json.load(f)
+            return _parse_treasury_extracted_data(treasury_data)
+        except Exception:
+            return {}
+
+
+# ============================================================================
 # CONFIGURATION MANAGEMENT
 # ============================================================================
 
@@ -55,20 +105,20 @@ class Configuration:
     """Centralized configuration management for SATA valuation model."""
 
     def __init__(self,
-                 # SATA Parameters
-                 sata_shares_outstanding: int = 2012700,
-                 sata_annual_dividend_rate: float = 0.1225,
+                 # SATA Parameters (fallbacks when treasury_extracted_data.json is unavailable)
+                 sata_shares_outstanding: int = 7513910,
+                 sata_annual_dividend_rate: float = 0.13,
                  sata_par_value: float = 100.0,
 
-                 # Treasury Parameters
-                 initial_bitcoin_holdings: float = 7525.02,
-                 initial_cash_reserve: float = 67600000.0,  # Default: ~67M (will be overridden by treasury_extracted_data.json if available)
+                 # Treasury Parameters (fallbacks when treasury_extracted_data.json is unavailable)
+                 initial_bitcoin_holdings: float = 19032.3,
+                 initial_cash_reserve: float = 186_400_000.0,
 
                  # Financial Parameters
                  discount_rate_annual: float = 0.04159,
 
                  # Dividend Parameters
-                 dividend_suspension_threshold_multiplier: float = 1.25,
+                 dividend_suspension_threshold_multiplier: float = 1,
                  compounded_dividend_start_rate: float = 0.1250,
                  compounded_dividend_increment: float = 0.0025,
                  compounded_dividend_max_rate: float = 0.20,
@@ -78,15 +128,17 @@ class Configuration:
                  sensitivity_threshold_end: float = 2.0,
                  sensitivity_threshold_step: float = 0.25,
 
-                 # BTC Credit Sensitivity Analysis - parameters calculated dynamically from current BTC credit ratio
-
                  # Performance Parameters
                  default_num_workers: Optional[int] = None,
                  chunk_size_multiplier: int = 8,
 
                  # Override from external data
+                 data_dir: Optional[str] = None,
                  **overrides):
         """Initialize configuration with defaults and optional overrides."""
+
+        if 'bitcoin_holdings' not in overrides:
+            overrides = {**_load_treasury_defaults(data_dir), **overrides}
 
         # SATA Parameters
         self.sata_shares_outstanding = overrides.get('sata_shares', sata_shares_outstanding)
@@ -115,8 +167,6 @@ class Configuration:
         self.dividend_rate_sensitivity_start_pct = -1.0   # -1.0% of baseline
         self.dividend_rate_sensitivity_end_pct = 1.0      # +1.0% of baseline
         self.dividend_rate_sensitivity_step_pct = 0.25    # 0.25% increments
-
-        # BTC Credit Sensitivity Analysis - parameters calculated dynamically
 
         # Performance Parameters
         self.default_num_workers = default_num_workers
@@ -300,13 +350,12 @@ def execute_parallel_with_fallback(worker_function: callable, tasks: List[Any],
 # ============================================================================
 
 def load_btcc_data(data_dir: Optional[str] = None) -> Dict[str, Any]:
-    """Load treasury data from ``<data_dir>/treasury_extracted_data.json`` (from fetch_treasury_api.py)."""
-    data: Dict[str, Any] = {}
+    """Load treasury data from ``<data_dir>/treasury_extracted_data.json`` (from fetch_asst_api.py / fetch_data.py)."""
     root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
     treasury_data_file = root / "treasury_extracted_data.json"
 
     if not treasury_data_file.is_file():
-        print("  Run: python fetch_treasury_api.py to fetch latest data.")
+        print("  Run: python fetch_data.py to fetch latest data.")
         return {}
 
     try:
@@ -316,27 +365,17 @@ def load_btcc_data(data_dir: Optional[str] = None) -> Dict[str, Any]:
         if 'timestamp' in treasury_data:
             print(f"  Data timestamp: {treasury_data['timestamp']}")
 
-        if 'btc_holdings' in treasury_data:
-            data['bitcoin_holdings'] = treasury_data['btc_holdings']
+        data = _parse_treasury_extracted_data(treasury_data)
+
+        if 'bitcoin_holdings' in data:
             print(f"  BTC Holdings: {data['bitcoin_holdings']:,.2f} BTC")
-
-        if 'cash' in treasury_data:
-            data['cash'] = treasury_data['cash']
+        if 'cash' in data:
             print(f"  Cash: ${data['cash']:,.0f}")
-
-        if 'sata_shares' in treasury_data:
-            data['sata_shares'] = treasury_data['sata_shares']
+        if 'sata_shares' in data:
             print(f"  SATA Shares: {data['sata_shares']:,}")
-
-        if 'sata_dividend_rate' in treasury_data:
-            dividend_rate = treasury_data['sata_dividend_rate']
-            if dividend_rate > 1:
-                dividend_rate = dividend_rate / 100.0
-            data['sata_dividend_rate'] = dividend_rate
+        if 'sata_dividend_rate' in data:
             print(f"  SATA Dividend Rate: {data['sata_dividend_rate']:.2%}")
-
-        if 'sata_price' in treasury_data:
-            data['sata_current_price'] = treasury_data['sata_price']
+        if 'sata_current_price' in data:
             print(f"  SATA Current Price: ${data['sata_current_price']:.2f}")
 
         return data
@@ -519,8 +558,8 @@ RESULT_DTYPE = np.dtype([
     ('threshold_value', 'f8'),     # Threshold sensitivity: absolute threshold value
     ('dividend_rate', 'f8'),       # Dividend rate sensitivity: rate value
     ('dividend_rate_change_pct', 'f8'), # Dividend rate sensitivity: percentage change
-    ('btc_credit_ratio', 'f8'),    # BTC credit sensitivity: ratio value
-    ('btc_holdings', 'f8'),        # BTC credit sensitivity: required holdings
+    ('btc_credit_ratio', 'f8'),    # unused legacy field
+    ('btc_holdings', 'f8'),        # unused legacy field
     ('mean_npv_per_share', 'f8'),
     ('median_npv_per_share', 'f8'),
     ('mean_months_paid', 'f8'),
@@ -528,7 +567,7 @@ RESULT_DTYPE = np.dtype([
     ('std_npv_per_share', 'f8'),
     ('min_npv_per_share', 'f8'),   # Scenarios only
     ('max_npv_per_share', 'f8'),   # Scenarios only
-    ('npv_per_additional_btc', 'f8') # BTC credit elasticity
+    ('npv_per_additional_btc', 'f8') # unused legacy field
 ])
 
 # Legacy result classes removed - using RESULT_DTYPE structured arrays exclusively
@@ -584,24 +623,6 @@ def create_sensitivity_dividend_rate_result(dividend_rate: float, dividend_rate_
     result['std_npv_per_share'] = std_npv_per_share
     return result
 
-def create_sensitivity_btc_credit_result(btc_credit_ratio: float, btc_holdings: float,
-                                        mean_npv_per_share: float, median_npv_per_share: float,
-                                        mean_months_paid: float, mean_accumulated_unpaid: float,
-                                        std_npv_per_share: float,
-                                        npv_per_additional_btc: float = 0.0) -> np.ndarray:
-    """Create a single BTC credit sensitivity result in structured array format."""
-    result = np.zeros(1, dtype=RESULT_DTYPE)
-    result['result_type'] = 'sensitivity_btc_credit'
-    result['btc_credit_ratio'] = btc_credit_ratio
-    result['btc_holdings'] = btc_holdings
-    result['mean_npv_per_share'] = mean_npv_per_share
-    result['median_npv_per_share'] = median_npv_per_share
-    result['mean_months_paid'] = mean_months_paid
-    result['mean_accumulated_unpaid'] = mean_accumulated_unpaid
-    result['std_npv_per_share'] = std_npv_per_share
-    result['npv_per_additional_btc'] = npv_per_additional_btc
-    return result
-
 
 class BaselineResults:
     """Results from baseline scenario analysis."""
@@ -640,6 +661,10 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
     - price_path: Array of monthly Bitcoin prices for this simulation
     - config: Configuration dict with simulation parameters
     - threshold_multiplier: Optional override for threshold calculation (default uses config value)
+
+    Dividends are funded from cash whenever available (cash is never gated by the threshold).
+    Bitcoin may only be sold for dividends when BTC mark-to-market is at or above threshold_value
+    (= total_par_value × threshold_multiplier, typically 1× par).
 
     Returns:
     - months_paid: Number of months dividends were paid
@@ -685,53 +710,64 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
     # Simulate each month - this is the 80% bottleneck
     for month in range(TOTAL_MONTHS):
         btc_price = price_path[month]
-        bitcoin_value = bitcoin_holdings * btc_price
+        btc_value = bitcoin_holdings * btc_price
+        above_threshold = btc_value >= threshold_value
 
         # Early termination check: if insolvent for 24+ consecutive months
         if enable_early_termination and bitcoin_holdings <= 0.001 and cash_reserve < monthly_dividend_total and consecutive_insolvent_months >= 24:
             break
 
-        if bitcoin_value >= threshold_value:
-            consecutive_insolvent_months = 0  # Reset counter when above threshold
+        month_dividend_paid = 0.0
 
-            # Pay accumulated dividends first (ultra-streamlined)
-            if accumulated_unpaid_dividends > 0:
-                # Fast path: calculate total available resources
-                total_available = cash_reserve + bitcoin_holdings * btc_price
-                accumulated_payment = min(accumulated_unpaid_dividends, total_available)
+        # Pay accumulated unpaid dividends — cash always, BTC only when above threshold
+        if accumulated_unpaid_dividends > 0 and cash_reserve > 0:
+            cash_payment = min(accumulated_unpaid_dividends, cash_reserve)
+            cash_reserve -= cash_payment
+            cash_flows[month] += cash_payment
+            accumulated_unpaid_dividends -= cash_payment
+            if accumulated_unpaid_dividends <= 0:
+                months_unpaid = 0
 
-                if accumulated_payment > 0:
-                    # Optimized deduction: use cash first, then BTC
-                    cash_used = min(accumulated_payment, cash_reserve)
-                    btc_used = (accumulated_payment - cash_used) / btc_price
+        if accumulated_unpaid_dividends > 0 and above_threshold:
+            total_available = cash_reserve + bitcoin_holdings * btc_price
+            accumulated_payment = min(accumulated_unpaid_dividends, total_available)
 
-                    cash_reserve -= cash_used
-                    bitcoin_holdings -= btc_used
-                    cash_flows[month] += accumulated_payment  # Record cash flow
-
-                    accumulated_unpaid_dividends -= accumulated_payment
-                    months_unpaid = 0 if accumulated_unpaid_dividends <= 0 else months_unpaid
-
-            # Pay regular dividend (ultra-streamlined)
-            remaining_value = cash_reserve + bitcoin_holdings * btc_price
-            if remaining_value >= monthly_dividend_total:
-                # Optimized deduction: same logic as above
-                cash_used = min(monthly_dividend_total, cash_reserve)
-                btc_used = (monthly_dividend_total - cash_used) / btc_price
+            if accumulated_payment > 0:
+                cash_used = min(accumulated_payment, cash_reserve)
+                btc_used = (accumulated_payment - cash_used) / btc_price
 
                 cash_reserve -= cash_used
                 bitcoin_holdings -= btc_used
-                cash_flows[month] += monthly_dividend_total  # Record cash flow
-                months_paid += 1
+                cash_flows[month] += accumulated_payment
 
-            elif accumulated_unpaid_dividends <= 0:
-                # No payments possible - accumulate with compound rate
-                months_unpaid += 1
-                compounded_rate = min(compounded_start_rate + (months_unpaid * compounded_increment), compounded_max_rate)
-                accumulated_unpaid_dividends += monthly_dividend_total * (1 + compounded_rate/12)
-                consecutive_insolvent_months += 1
+                accumulated_unpaid_dividends -= accumulated_payment
+                if accumulated_unpaid_dividends <= 0:
+                    months_unpaid = 0
+
+        # Pay current month — cash always, BTC only when above threshold
+        if cash_reserve > 0:
+            cash_payment = min(monthly_dividend_total, cash_reserve)
+            cash_reserve -= cash_payment
+            cash_flows[month] += cash_payment
+            month_dividend_paid += cash_payment
+
+        if month_dividend_paid < monthly_dividend_total and above_threshold:
+            shortfall = monthly_dividend_total - month_dividend_paid
+            total_available = cash_reserve + bitcoin_holdings * btc_price
+
+            if total_available >= shortfall:
+                cash_used = min(shortfall, cash_reserve)
+                btc_used = (shortfall - cash_used) / btc_price
+
+                cash_reserve -= cash_used
+                bitcoin_holdings -= btc_used
+                cash_flows[month] += shortfall
+                month_dividend_paid += shortfall
+
+        if month_dividend_paid >= monthly_dividend_total:
+            months_paid += 1
+            consecutive_insolvent_months = 0
         else:
-            # Bitcoin value below threshold - suspend dividend
             months_unpaid += 1
             compounded_rate = min(compounded_start_rate + (months_unpaid * compounded_increment), compounded_max_rate)
             accumulated_unpaid_dividends += monthly_dividend_total * (1 + compounded_rate/12)
@@ -774,17 +810,6 @@ def simulate_unified_worker(args: Tuple[str, Any, np.ndarray, Dict[str, Any]]) -
         modified_config['sata_annual_dividend_rate'] = worker_param
         modified_config['sata_monthly_dividend_per_share'] = worker_param * config['sata_par_value'] / 12
         modified_config['sata_monthly_dividend_total'] = modified_config['sata_monthly_dividend_per_share'] * config['sata_shares_outstanding']
-        sim_kwargs['config_override'] = modified_config
-    elif worker_type == 'btc_credit':
-        # Calculate BTC holdings for this credit ratio (adjusted BTC credit includes cash)
-        # Formula: adjusted_btc_credit = (btc_holdings * btc_price + cash) / total_par_value
-        # Rearranged: btc_holdings = (adjusted_btc_credit * total_par_value - cash) / btc_price
-        target_total_value = worker_param * config['total_par_value']
-        cash = config['initial_cash_reserve']
-        required_btc_value = target_total_value - cash
-        btc_holdings = max(0, required_btc_value / config['current_bitcoin_price'])
-        modified_config = config.copy()
-        modified_config['initial_bitcoin_holdings'] = btc_holdings
         sim_kwargs['config_override'] = modified_config
 
     # Run simulations
@@ -856,18 +881,6 @@ def simulate_unified_worker(args: Tuple[str, Any, np.ndarray, Dict[str, Any]]) -
             mean_months_paid=months_paid.mean(),
             mean_accumulated_unpaid=accumulated_unpaid_final.mean(),
             std_npv_per_share=npvs_per_share.std()
-        )
-    elif worker_type == 'btc_credit':
-        total_months = config['total_months']
-        return create_sensitivity_btc_credit_result(
-            btc_credit_ratio=worker_param,
-            btc_holdings=btc_holdings,
-            mean_npv_per_share=npvs_per_share.mean(),
-            median_npv_per_share=np.median(npvs_per_share),
-            mean_months_paid=months_paid.mean(),
-            mean_accumulated_unpaid=accumulated_unpaid_final.mean(),
-            std_npv_per_share=npvs_per_share.std(),
-            npv_per_additional_btc=0.0  # Will be calculated later
         )
 
 
@@ -1075,42 +1088,6 @@ def generate_dividend_rate_sensitivity_plots(dividend_rate_sensitivity_df, basel
     return filepath, img_base64
 
 
-def generate_btc_credit_sensitivity_plots(btc_credit_sensitivity_df, current_btc_credit, plots_dir):
-    """Generate plots for BTC credit sensitivity analysis, showing NPV and dividend sustainability across different BTC credit ratios."""
-    os.makedirs(plots_dir, exist_ok=True)
-
-    fig, axes = plt.subplots(2, 1, figsize=(14, 8))
-
-    # Plot NPV vs BTC Credit Ratio
-    axes[0].plot(btc_credit_sensitivity_df['btc_credit_ratio'], btc_credit_sensitivity_df['mean_npv_per_share'],
-                 marker='o', linewidth=2, markersize=8, color='blue', label='Mean NPV per Share')
-    axes[0].axvline(x=current_btc_credit, color='red', linestyle='--', linewidth=1.5, alpha=0.7,
-                    label=f'Current BTC Credit ({current_btc_credit:.4f}x)')
-    axes[0].set_xlabel('BTC Credit Ratio', fontsize=12)
-    axes[0].set_ylabel('Mean NPV per Share (USD)', fontsize=12)
-    axes[0].set_title('NPV vs BTC Credit Ratio', fontsize=14, fontweight='bold')
-    axes[0].grid(True, alpha=0.3)
-    axes[0].legend(fontsize=11)
-
-    # Plot Months Paid vs BTC Credit Ratio
-    axes[1].plot(btc_credit_sensitivity_df['btc_credit_ratio'], btc_credit_sensitivity_df['mean_months_paid'],
-                 marker='s', linewidth=2, markersize=8, color='orange', label='Mean Months Paid')
-    axes[1].axvline(x=current_btc_credit, color='red', linestyle='--', linewidth=1.5, alpha=0.7,
-                    label=f'Current BTC Credit ({current_btc_credit:.4f}x)')
-    axes[1].set_xlabel('BTC Credit Ratio', fontsize=12)
-    axes[1].set_ylabel('Mean Months Dividends Paid', fontsize=12)
-    axes[1].set_title('Dividend Sustainability vs BTC Credit Ratio', fontsize=14, fontweight='bold')
-    axes[1].grid(True, alpha=0.3)
-    axes[1].legend(fontsize=11)
-
-    plt.tight_layout()
-    filepath = os.path.join(plots_dir, 'btc_credit_sensitivity_analysis.png')
-    plt.savefig(filepath, bbox_inches='tight', dpi=150)
-    img_base64 = plot_to_base64(fig)
-
-    return filepath, img_base64
-
-
 # ============================================================================
 # JSON RESULTS OUTPUT
 # ============================================================================
@@ -1165,7 +1142,7 @@ def setup_configuration_and_data(args) -> Tuple[Configuration, Dict[str, Any], n
     price_data = load_price_paths(args.data_dir)
 
     # Create configuration with overrides from JSON data
-    config = Configuration(**strive_data)
+    config = Configuration(data_dir=args.data_dir, **strive_data)
     config.optimization_level = args.optimization_level
     config.enable_early_termination = args.optimization_level >= 1
     config.validate()
@@ -1357,23 +1334,6 @@ def run_unified_sensitivity_analysis(analysis_type: str, baseline_price_paths: n
             ),
             'sort_key': 'dividend_rate'
         },
-        'btc_credit': {
-            'title': 'BTC CREDIT',
-            'param_method': None,  # Calculated inline
-            'param_name': 'BTC credit ratios',
-            'range_info': lambda c: f"  Current BTC credit: {config_dict.get('baseline_btc_credit', 1.0):.4f}x\n  Range: ±1.0x from current (step: 0.25x)",
-            'create_baseline': lambda c, stats: create_sensitivity_btc_credit_result(
-                btc_credit_ratio=config_dict.get('baseline_btc_credit', 1.0),
-                btc_holdings=c.initial_bitcoin_holdings,
-                mean_npv_per_share=stats['npv_mean'],
-                median_npv_per_share=stats['npv_median'],
-                mean_months_paid=stats['months_mean'],
-                mean_accumulated_unpaid=stats['accumulated_mean'],
-                std_npv_per_share=stats['npv_std'],
-                npv_per_additional_btc=0.0
-            ),
-            'sort_key': 'btc_credit_ratio'
-        }
     }
 
     if analysis_type not in analysis_configs:
@@ -1385,20 +1345,9 @@ def run_unified_sensitivity_analysis(analysis_type: str, baseline_price_paths: n
     print(f"SENSITIVITY ANALYSIS: {cfg['title']}")
     print("="*70)
 
-    # Get parameters using the configured method or calculate inline
-    if cfg['param_method'] is not None:
-        param_method = getattr(config, cfg['param_method'])
-        parameters = param_method()
-    else:
-        # Calculate BTC credit ratios inline (same logic as original)
-        current_btc_credit = config_dict['baseline_btc_credit']
-        range_half_width = 1.0
-        step_size = 0.25
-        start_ratio = max(0.25, current_btc_credit - range_half_width)
-        end_ratio = current_btc_credit + range_half_width
-        parameters = np.arange(start_ratio, end_ratio + step_size, step_size)
-        # Exclude the baseline BTC credit ratio to avoid redundant calculation
-        parameters = parameters[np.abs(parameters - current_btc_credit) > 1e-4]
+    # Get parameters using the configured method
+    param_method = getattr(config, cfg['param_method'])
+    parameters = param_method()
 
     print(f"Testing {len(parameters)} {cfg['param_name']}...")
     print(cfg['range_info'](config))
@@ -1534,12 +1483,8 @@ def main() -> None:
     config_dict['baseline_months_paid_mean'] = months_dividends_paid.mean()
     config_dict['baseline_accumulated_unpaid_mean'] = accumulated_unpaid_dividends_final.mean()
 
-    # Calculate and store baseline values
-    # Adjusted BTC credit includes cash: (btc_holdings * btc_price + cash) / total_par_value
-    current_btc_price = config_dict.get('current_bitcoin_price', 87057.08)
-    adjusted_btc_value = config.initial_bitcoin_holdings * current_btc_price + config.initial_cash_reserve
+    # Calculate and store baseline values used by later sensitivity runs
     config_dict.update({
-        'baseline_btc_credit': adjusted_btc_value / config.total_par_value,
         'baseline_dividend_rate': config.sata_annual_dividend_rate,
         'baseline_btc_holdings': config.initial_bitcoin_holdings
     })
@@ -1556,6 +1501,19 @@ def main() -> None:
         median_npv_per_share=config_dict['baseline_npv_per_share_median'],
         std_npv_per_share=config_dict['baseline_npv_per_share_std'],
         cv_npv_per_share=config_dict['baseline_npv_per_share_std'] / FINAL_VALUATION_PER_SHARE
+    )
+
+    from preferred_story import build_density_histogram
+
+    baseline_histograms = {
+        "months_paid": build_density_histogram(months_dividends_paid, n_bins=48),
+        "npv_per_share": build_density_histogram(npvs_per_share, n_bins=48),
+    }
+    print(
+        f"  Months paid range: {months_dividends_paid.min():.0f}–"
+        f"{months_dividends_paid.max():.0f} "
+        f"(cash runway alone ≈ "
+        f"{config_dict['initial_cash_reserve'] / config_dict['sata_monthly_dividend_total']:.1f} mo)"
     )
 
     # Generate baseline plots
@@ -1582,10 +1540,10 @@ def main() -> None:
             },
             'configuration': config_dict,
             'baseline_results': baseline_results.__dict__,
+            'baseline_histograms': baseline_histograms,
             'scenario_results': [],
             'sensitivity_results': [],
             'dividend_rate_sensitivity_results': [],
-            'btc_credit_sensitivity_results': [],
             'plot_images': plot_images
         }
 
@@ -1645,10 +1603,6 @@ def main() -> None:
     dividend_rate_sensitivity_df = pd.DataFrame([{'dividend_rate': r['dividend_rate'], 'dividend_rate_change_pct': r['dividend_rate_change_pct'], 'mean_npv_per_share': r['mean_npv_per_share'], 'median_npv_per_share': r['median_npv_per_share'], 'mean_months_paid': r['mean_months_paid'], 'mean_accumulated_unpaid': r['mean_accumulated_unpaid'], 'std_npv_per_share': r['std_npv_per_share']} for r in dividend_rate_sensitivity_results])
     plot_images['dividend_rate_sensitivity_analysis'] = generate_dividend_rate_sensitivity_plots(dividend_rate_sensitivity_df, config.sata_annual_dividend_rate, args.plots_dir)[1]
 
-    btc_credit_sensitivity_results = run_unified_sensitivity_analysis('btc_credit', baseline_price_paths, config, config_dict, num_workers)
-    btc_credit_sensitivity_df = pd.DataFrame([{'btc_credit_ratio': r['btc_credit_ratio'], 'btc_holdings': r['btc_holdings'], 'mean_npv_per_share': r['mean_npv_per_share'], 'median_npv_per_share': r['median_npv_per_share'], 'mean_months_paid': r['mean_months_paid'], 'mean_accumulated_unpaid': r['mean_accumulated_unpaid'], 'std_npv_per_share': r['std_npv_per_share'], 'npv_per_additional_btc': r['npv_per_additional_btc']} for r in btc_credit_sensitivity_results])
-    plot_images['btc_credit_sensitivity_analysis'] = generate_btc_credit_sensitivity_plots(btc_credit_sensitivity_df, config_dict['baseline_btc_credit'], args.plots_dir)[1]
-
     # Save results to JSON
     logger.info("="*70)
     logger.info("SAVING RESULTS TO JSON")
@@ -1659,7 +1613,6 @@ def main() -> None:
     scenario_list = [{name: row[name] for name in scenario_results.dtype.names} for row in scenario_results] if len(scenario_results) > 0 else []
     sensitivity_list = [{name: row[name] for name in sensitivity_results.dtype.names} for row in sensitivity_results] if len(sensitivity_results) > 0 else []
     dividend_rate_sensitivity_list = [{name: row[name] for name in dividend_rate_sensitivity_results.dtype.names} for row in dividend_rate_sensitivity_results] if len(dividend_rate_sensitivity_results) > 0 else []
-    btc_credit_sensitivity_list = [{name: row[name] for name in btc_credit_sensitivity_results.dtype.names} for row in btc_credit_sensitivity_results] if len(btc_credit_sensitivity_results) > 0 else []
 
     results_data = {
         'metadata': {
@@ -1668,10 +1621,10 @@ def main() -> None:
         },
         'configuration': config_dict,
         'baseline_results': baseline_dict,
+        'baseline_histograms': baseline_histograms,
         'scenario_results': scenario_list,
         'sensitivity_results': sensitivity_list,
         'dividend_rate_sensitivity_results': dividend_rate_sensitivity_list,
-        'btc_credit_sensitivity_results': btc_credit_sensitivity_list,
         'plot_images': plot_images
     }
 

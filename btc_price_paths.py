@@ -20,15 +20,15 @@ HISTORICAL_DATA_PERIOD = 'max'        # Historical data period ('max' = all avai
 
 # Manual Distribution Parameters (adjust these to fit your data)
 # Base Normal Distribution Parameters
-DIST_MEAN = -0.008              # Mean (location parameter)
-DIST_STD = 0.16                   # Standard deviation (scale parameter)
+DIST_MEAN = -0.007              # Mean (location parameter)
+DIST_STD = 0.118                  # Standard deviation (scale parameter)
 
 # Skewness Parameter
-DIST_SKEW = -0.25                   # Skewness (0 = symmetric, >0 = right-skewed, <0 = left-skewed)
+DIST_SKEW = 0.01                    # Skewness (0 = symmetric, >0 = right-skewed, <0 = left-skewed)
                                   # Range: typically -2 to +2 for reasonable distributions
 
 # Kurtosis Parameter (excess kurtosis)
-DIST_KURTOSIS = 5                 # Excess kurtosis (0 = normal, >0 = fat tails, <0 = thin tails)
+DIST_KURTOSIS = 0.2               # Excess kurtosis (0 = normal, >0 = fat tails, <0 = thin tails)
                                   # Range: typically -1 to +5 for reasonable distributions
 
 # Additional Parameters (for advanced control)
@@ -47,6 +47,10 @@ MEAN_CAGR = 0.0                   # Mean Compound Annual Growth Rate (Bitcoin tr
 # ============================================================================
 
 import numpy as np
+
+# NumPy 2.x removed np.trapz in favor of np.trapezoid
+_trapz = np.trapezoid if hasattr(np, "trapezoid") else np.trapz
+
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for saving plots
@@ -159,7 +163,7 @@ def manual_distribution_pdf(x, mean, std, skew, kurtosis, tail_weight=1.0, asymm
     if len(x) > 1:
         dx = np.diff(x)
         if len(dx) > 0:
-            integral = np.trapz(pdf, x)
+            integral = _trapz(pdf, x)
             if integral > 0:
                 pdf = pdf / integral
     
@@ -512,19 +516,14 @@ def main():
     print("STEP 2: GENERATE BITCOIN PRICE PATHS")
     print(f"{'='*70}")
     
-    # Fetch current Bitcoin price
-    try:
-        btc_ticker = yf.Ticker("BTC-USD")
-        btc_data = btc_ticker.history(period="1d")
-        if len(btc_data) > 0:
-            CURRENT_BITCOIN_PRICE = float(btc_data['Close'].iloc[-1])
-            btc_price_source = "Yahoo Finance"
-        else:
-            CURRENT_BITCOIN_PRICE = 92395.03
-            btc_price_source = "Default (Yahoo Finance returned no data)"
-    except Exception as e:
-        CURRENT_BITCOIN_PRICE = 92395.03
-        btc_price_source = f"Default (Yahoo Finance error)"
+    from fetch_yahoo import load_btc_spot
+
+    # Live Yahoo spot (same source as export_site_data) — never trust a stale
+    # btc_historical_data.json current_price for path starting levels.
+    CURRENT_BITCOIN_PRICE = load_btc_spot(
+        artifact_dir, force_refresh=True, log=False
+    )
+    btc_price_source = "Yahoo BTC-USD (live)"
     
     MONTHS_PER_YEAR = 12
     TOTAL_MONTHS = SIMULATION_YEARS * MONTHS_PER_YEAR
@@ -981,11 +980,11 @@ def main():
     dx_fine = x_fine[1] - x_fine[0]
     pdf_fine = pdf_fine / (np.sum(pdf_fine) * dx_fine)
     
-    mean_manual = np.trapz(x_fine * pdf_fine, x_fine)
-    var_manual = np.trapz((x_fine - mean_manual)**2 * pdf_fine, x_fine)
+    mean_manual = _trapz(x_fine * pdf_fine, x_fine)
+    var_manual = _trapz((x_fine - mean_manual)**2 * pdf_fine, x_fine)
     std_manual = np.sqrt(var_manual)
-    skew_manual = np.trapz(((x_fine - mean_manual) / std_manual)**3 * pdf_fine, x_fine) if std_manual > 0 else 0
-    kurt_manual = np.trapz(((x_fine - mean_manual) / std_manual)**4 * pdf_fine, x_fine) - 3 if std_manual > 0 else 0
+    skew_manual = _trapz(((x_fine - mean_manual) / std_manual)**3 * pdf_fine, x_fine) if std_manual > 0 else 0
+    kurt_manual = _trapz(((x_fine - mean_manual) / std_manual)**4 * pdf_fine, x_fine) - 3 if std_manual > 0 else 0
     
     print("\n" + "=" * 70)
     print("DISTRIBUTION COMPARISON STATISTICS")

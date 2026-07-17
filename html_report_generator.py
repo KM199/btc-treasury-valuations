@@ -21,7 +21,7 @@ from strc_paths import OUTPUT_DIR as DEFAULT_OUTPUT_DIR, REPORTS_DIR, ensure_out
 # ============================================================================
 
 def generate_html_report(config_dict: Dict[str, Any], baseline_results, scenario_results, sensitivity_results,
-                         dividend_rate_sensitivity_results, btc_credit_sensitivity_results, plot_images, output_file):
+                         dividend_rate_sensitivity_results, plot_images, output_file):
     """Generate formatted HTML report with embedded images and tables."""
 
     html_content = f"""<!DOCTYPE html>
@@ -439,54 +439,6 @@ def generate_html_report(config_dict: Dict[str, Any], baseline_results, scenario
     </div>
 """
 
-    # BTC Credit Sensitivity Analysis Section
-    if btc_credit_sensitivity_results and len(btc_credit_sensitivity_results) > 0:
-        btc_credit_sensitivity_df = pd.DataFrame([{
-            'btc_credit_ratio': r['btc_credit_ratio'],
-            'btc_holdings': r['btc_holdings'],
-            'mean_npv_per_share': r['mean_npv_per_share'],
-            'median_npv_per_share': r['median_npv_per_share'],
-            'mean_months_paid': r['mean_months_paid'],
-            'mean_accumulated_unpaid': r['mean_accumulated_unpaid'],
-            'std_npv_per_share': r['std_npv_per_share'],
-            'npv_per_additional_btc': r['npv_per_additional_btc']
-        } for r in btc_credit_sensitivity_results])
-
-        # Format percentages and currency values for display
-        btc_credit_sensitivity_df['btc_credit_ratio_formatted'] = btc_credit_sensitivity_df['btc_credit_ratio'].apply(lambda x: f"{x:.4f}x")
-        btc_credit_sensitivity_df['btc_holdings_formatted'] = btc_credit_sensitivity_df['btc_holdings'].apply(lambda x: f"{x:,.0f} BTC")
-        btc_credit_sensitivity_df['mean_npv_per_share_formatted'] = btc_credit_sensitivity_df['mean_npv_per_share'].apply(lambda x: f"${x:,.2f}")
-        btc_credit_sensitivity_df['mean_months_paid_formatted'] = btc_credit_sensitivity_df['mean_months_paid'].apply(lambda x: f"{x:.1f}")
-        btc_credit_sensitivity_df['mean_accumulated_unpaid_formatted'] = btc_credit_sensitivity_df['mean_accumulated_unpaid'].apply(lambda x: f"${x:,.2f}")
-        btc_credit_sensitivity_df['npv_per_additional_btc_formatted'] = btc_credit_sensitivity_df['npv_per_additional_btc'].apply(lambda x: f"{x:.2f}")
-
-        html_content += f"""
-    <div class="section">
-        <h2>Sensitivity Analysis: BTC Credit</h2>
-        <p>Analysis of how different adjusted BTC credit ratios (including cash position) affect NPV and dividend sustainability.</p>
-"""
-
-        if 'btc_credit_sensitivity_analysis' in plot_images:
-            html_content += f"""
-        <div class="plot-container">
-            <h3>BTC Credit Sensitivity Analysis Plots</h3>
-            <img src="data:image/png;base64,{plot_images['btc_credit_sensitivity_analysis']}" alt="BTC Credit Sensitivity Analysis">
-        </div>
-"""
-
-        html_content += f"""
-        <h3>Detailed BTC Credit Sensitivity Results</h3>
-        {btc_credit_sensitivity_df[['btc_credit_ratio_formatted', 'btc_holdings_formatted', 'mean_npv_per_share_formatted', 'mean_months_paid_formatted', 'npv_per_additional_btc_formatted']].rename(columns={'btc_credit_ratio_formatted': 'BTC Credit Ratio', 'btc_holdings_formatted': 'BTC Holdings', 'mean_npv_per_share_formatted': 'Mean NPV per Share ($)', 'mean_months_paid_formatted': 'Mean Months Paid', 'npv_per_additional_btc_formatted': 'NPV % Change / BTC % Change'}).to_html(index=False, classes='', table_id='btc-credit-sensitivity-table')}
-
-        <div class="summary-box">
-            <h3>BTC Credit Sensitivity Summary</h3>
-            <p><strong>NPV Range:</strong> ${btc_credit_sensitivity_df['mean_npv_per_share'].min():,.2f} to ${btc_credit_sensitivity_df['mean_npv_per_share'].max():,.2f}</p>
-            <p><strong>NPV Range Span:</strong> ${btc_credit_sensitivity_df['mean_npv_per_share'].max() - btc_credit_sensitivity_df['mean_npv_per_share'].min():,.2f}</p>
-            <p><strong>BTC Credit Range:</strong> {btc_credit_sensitivity_df['btc_credit_ratio'].min():.1f}x to {btc_credit_sensitivity_df['btc_credit_ratio'].max():.1f}x</p>
-        </div>
-    </div>
-"""
-
     html_content += """
 </body>
 </html>
@@ -538,7 +490,6 @@ def main():
     scenario_results = results['scenario_results']
     sensitivity_results = results['sensitivity_results']
     dividend_rate_sensitivity_results = results.get('dividend_rate_sensitivity_results', [])
-    btc_credit_sensitivity_results = results.get('btc_credit_sensitivity_results', [])
     plot_images = results['plot_images']
 
     # Convert dict results back to objects for HTML generation
@@ -557,7 +508,6 @@ def main():
         scenario_results=scenario_results,
         sensitivity_results=sensitivity_results,
         dividend_rate_sensitivity_results=dividend_rate_sensitivity_results,
-        btc_credit_sensitivity_results=btc_credit_sensitivity_results,
         plot_images=plot_images,
         output_file=args.output
     )
