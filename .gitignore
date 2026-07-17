@@ -30,6 +30,12 @@ __pycache__/
 # IDE / local tooling
 .cursor/
 
+# Next.js
+web/node_modules/
+web/.next/
+web/out/
+web/*.tsbuildinfo
+
 # Optional: root-level fetched / run artifacts (regenerable; avoid accidental commit)
 *_data.json
 *_options.json

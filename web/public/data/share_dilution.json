@@ -1,0 +1,72 @@
+{
+  "as_of": "2026-07-16T23:54:54.487085+00:00",
+  "notes": {
+    "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
+    "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
+    "mstr_converts": "MSTR convertible notes stay as debt MTM; STRK stays as preferred at market. Neither is assumed to convert into common. Strategy's assumed_diluted_shares_outstanding that adds those shares is ignored.",
+    "asst_warrants": "ASST PIPE Traditional Warrants @ $27 (post-split) expire 2026-09-15 (1y after S-3ASR effective 2025-09-15). Deep OTM \u2014 excluded from rNAV denominator; likely expire worthless."
+  },
+  "asst": {
+    "ticker": "ASST",
+    "basic_shares": 83229511,
+    "effective_diluted_shares": 85937812,
+    "gross_diluted_shares": 112532247,
+    "rnav_denominator_shares": 85937812,
+    "overhang_effective": 2708301,
+    "breakdown": [
+      {
+        "name": "Warrants @ 27.00",
+        "share_count": 26594435,
+        "include_in_effective_dilution": false,
+        "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
+        "expiry": "2026-09-15"
+      },
+      {
+        "name": "RSU (Unvested)",
+        "share_count": 1704019,
+        "include_in_effective_dilution": true,
+        "notes": ""
+      },
+      {
+        "name": "Options (Legacy SMLR)",
+        "share_count": 1004282,
+        "include_in_effective_dilution": true,
+        "notes": ""
+      }
+    ],
+    "excluded_from_effective": [
+      {
+        "name": "Warrants @ 27.00",
+        "share_count": 26594435,
+        "include_in_effective_dilution": false,
+        "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
+        "expiry": "2026-09-15"
+      }
+    ],
+    "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
+    "source": "https://data.strategytracker.com/ASST.v20260716T230418Z.json"
+  },
+  "mstr": {
+    "ticker": "MSTR",
+    "basic_shares": 376424000,
+    "options_outstanding": 3174000,
+    "rsu_psu_unvested": 889000,
+    "rnav_denominator_shares": 380487000,
+    "assumed_diluted_shares_incl_converts": 406099000,
+    "convert_preferred_shares_excluded": 25611000,
+    "breakdown": [
+      {
+        "name": "Options outstanding",
+        "share_count": 3174000,
+        "include_in_effective_dilution": true
+      },
+      {
+        "name": "RSU/PSU unvested",
+        "share_count": 889000,
+        "include_in_effective_dilution": true
+      }
+    ],
+    "policy": "rNAV uses basic + employee options + RSU/PSU only. Converts and STRK are not assumed to convert \u2014 debt / preferred claims in the numerator at market.",
+    "source": "mstr_enriched_data.json"
+  }
+}

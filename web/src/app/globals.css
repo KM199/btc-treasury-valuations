@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #07090d;
+  color: #e8eef8;
+}
+
+::selection {
+  background: rgba(232, 137, 58, 0.35);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise 0.7s ease-out 0.08s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.7s ease-out 0.16s both;
+}
+
+.animate-drift {
+  animation: drift 6s ease-in-out infinite alternate;
+}
