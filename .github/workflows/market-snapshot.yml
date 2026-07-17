@@ -1,0 +1,51 @@
+name: Market snapshot (light)
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-snapshot
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch market data
+        run: |
+          python fetch_data.py --skip-deltas
+          python fetch_share_dilution.py
+        continue-on-error: true
+
+      - name: Export site JSON
+        run: python export_site_data.py --market-only
+
+      - name: Commit data (if changed)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/public/data/market_snapshot.json web/public/data/share_dilution.json output/share_dilution.json output/treasury_extracted_data.json || true
+          if git diff --staged --quiet; then
+            echo "No market_snapshot changes"
+          else
+            git commit -m "chore: refresh market_snapshot.json"
+            git push
+          fi

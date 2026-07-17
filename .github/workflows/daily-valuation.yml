@@ -1,0 +1,72 @@
+name: Daily valuation (heavy)
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-valuation
+  cancel-in-progress: false
+
+jobs:
+  value:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch data
+        run: python fetch_data.py --skip-deltas
+
+      - name: Cache BTC price paths
+        id: cache-paths
+        uses: actions/cache@v4
+        with:
+          path: |
+            output/btc_price_paths_scenarios_price_paths.npy
+            output/btc_price_paths_scenarios_metadata.npz
+          key: btc-paths-v1-${{ hashFiles('btc_price_paths.py') }}
+
+      - name: Ensure BTC price paths
+        run: |
+          if [ ! -f output/btc_price_paths_scenarios_price_paths.npy ]; then
+            python btc_price_paths.py
+          else
+            echo "Price paths restored from cache"
+          fi
+
+      - name: SATA valuation (baseline)
+        run: python sata_valuation.py --baseline-only
+
+      - name: STRC valuation (baseline)
+        run: python strc_valuation.py --baseline-only
+        continue-on-error: true
+
+      - name: Export site JSON
+        run: python export_site_data.py
+
+      - name: Commit data (if changed)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/public/data/ || true
+          if git diff --staged --quiet; then
+            echo "No fair_values / market changes"
+          else
+            git commit -m "chore: refresh fair_values and market snapshot"
+            git push
+          fi
