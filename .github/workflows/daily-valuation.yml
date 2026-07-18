@@ -58,9 +58,11 @@ jobs:
       - name: SATA valuation (baseline)
         run: python sata_valuation.py --baseline-only
 
-      - name: STRC valuation (baseline)
-        run: python strc_valuation.py --baseline-only
-        continue-on-error: true
+      # STRC valuation is intentionally not run: the model assumes STRC has
+      # sole claim on MSTR's entire consolidated treasury, ignoring senior
+      # convertible debt and the other preferred series that also draw on it.
+      # export_site_data.py already handles a missing strc_valuation_results.json
+      # gracefully (STRC renders as "pending" on the site).
 
       - name: Export site JSON
         run: python export_site_data.py
