@@ -554,15 +554,26 @@ def write_site_data(
         build_share_dilution(output_dir, force_refresh=False)
         existing = _load_json(dilution_src) or {}
     if not existing.get("asst") or not existing.get("mstr"):
-        raise RuntimeError(
-            "share_dilution.json missing asst or mstr after refresh — "
-            "check fetch_share_dilution.py / network."
-        )
-    dilution_dst = site_dir / "share_dilution.json"
-    with dilution_dst.open("w") as f:
-        json.dump(existing, f, indent=2)
-        f.write("\n")
-    print(f"  ✓ Wrote {dilution_dst}")
+        if market_only:
+            # --market-only promises to only refresh market_snapshot.json — an
+            # unrelated dilution-source outage must not fail the price update.
+            # ShareCountsSection.tsx already renders a graceful fallback when
+            # share_dilution.json is stale/missing.
+            print(
+                "  ⚠ share_dilution.json missing asst or mstr — skipping "
+                "(--market-only mode)"
+            )
+        else:
+            raise RuntimeError(
+                "share_dilution.json missing asst or mstr after refresh — "
+                "check fetch_share_dilution.py / network."
+            )
+    else:
+        dilution_dst = site_dir / "share_dilution.json"
+        with dilution_dst.open("w") as f:
+            json.dump(existing, f, indent=2)
+            f.write("\n")
+        print(f"  ✓ Wrote {dilution_dst}")
 
     if not market_only:
         fair = build_fair_values(output_dir)

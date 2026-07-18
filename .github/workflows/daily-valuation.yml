@@ -32,6 +32,10 @@ jobs:
       - name: Fetch data
         run: python fetch_data.py --skip-deltas
 
+      - name: Compute cache date
+        id: cache-date
+        run: echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
       - name: Cache BTC price paths
         id: cache-paths
         uses: actions/cache@v4
@@ -39,7 +43,9 @@ jobs:
           path: |
             output/btc_price_paths_scenarios_price_paths.npy
             output/btc_price_paths_scenarios_metadata.npz
-          key: btc-paths-v1-${{ hashFiles('btc_price_paths.py') }}
+          # Dated key: paths regenerate at least once per UTC day (fresh starting
+          # BTC price), while re-runs within the same day still hit the cache.
+          key: btc-paths-v1-${{ steps.cache-date.outputs.date }}-${{ hashFiles('btc_price_paths.py') }}
 
       - name: Ensure BTC price paths
         run: |
