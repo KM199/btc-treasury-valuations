@@ -22,6 +22,7 @@ import io
 import json
 import math
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -159,20 +160,19 @@ def fetch_fred_cm_yields(session: requests.Session | None = None) -> tuple[str, 
     """Latest DGS yields from FRED fredgraph.csv (cached; full history CSV can be slow)."""
     from data_cache import get_or_fetch
 
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        ),
-    }
-
     def fetch() -> dict:
         sess = session or requests.Session()
         print("   Downloading FRED DGS yields (fredgraph.csv — can take 10–30s)...")
-        # 45s timed out 3/3 times in CI (fredgraph.csv is a multi-series full-
-        # history CSV and can run slower than the "typical" 10-30s from a
-        # GitHub Actions runner); 90s gives real headroom instead of a coin flip.
-        r = sess.get(FREDGRAPH_URL, headers=headers, timeout=90)
+        # No custom headers here on purpose: a spoofed browser User-Agent
+        # (previously a fake Chrome-on-Mac string) reproducibly triggered an
+        # immediate HTTP/2 stream-level rejection from FRED's edge (curl -H
+        # with that same header failed in <1s with CURLE_HTTP2_STREAM; bare
+        # curl and bare `requests.get()` with no headers both succeed in a
+        # few seconds). This is almost certainly TLS/HTTP2-fingerprint-vs-
+        # User-Agent bot detection — the claimed UA doesn't match the actual
+        # TLS handshake since this isn't really Chrome. The 3 consecutive
+        # "timeouts" in CI were this, not FRED being slow.
+        r = sess.get(FREDGRAPH_URL, timeout=30)
         r.raise_for_status()
         record_date, par = _parse_fredgraph_csv(r.text)
         return {"as_of_date": record_date, "par_yields_decimal": par}
@@ -328,3 +328,18 @@ def load_yield_curve_json(path: str | Path) -> tuple[TreasuryZeroCurve | None, s
         return TreasuryZeroCurve.from_saved_dict(data), None
     except Exception as e:
         return None, str(e)
+
+
+def save_yield_curve_fallback_cache(curve: TreasuryZeroCurve, path: str | Path) -> None:
+    """Persist a successfully-fetched curve to the tracked (committed) fallback path.
+
+    Call this on every genuine fetch success (any environment), so the
+    committed fallback stays reasonably current over time — last-known-good
+    real Treasury data rather than a hardcoded constant that's never updated.
+    """
+    p = Path(path)
+    payload = {"timestamp": datetime.now().isoformat()}
+    payload.update(curve.to_json_dict())
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("w") as f:
+        json.dump(payload, f, indent=2)

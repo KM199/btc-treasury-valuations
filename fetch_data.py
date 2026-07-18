@@ -30,7 +30,11 @@ import pandas as pd
 import requests
 import yfinance as yf
 
-from fetch_treasury_zero_yieldcurve import build_treasury_zero_curve
+from fetch_treasury_zero_yieldcurve import (
+    TreasuryZeroCurve,
+    build_treasury_zero_curve,
+    save_yield_curve_fallback_cache,
+)
 from data_cache import (
     begin_cache_tracking,
     get_or_fetch,
@@ -41,7 +45,7 @@ from data_cache import (
     run_fresh_fetches,
     write_cache,
 )
-from strc_paths import OUTPUT_DIR, ensure_output_dirs
+from strc_paths import OUTPUT_DIR, YIELD_CURVE_FALLBACK_PATH, ensure_output_dirs
 from fetch_yahoo import load_btc_spot, yahoo_spot_price
 
 # Constants
@@ -404,6 +408,16 @@ def fetch_treasury_yield_curve(
             json.dump(payload, f, indent=2)
         print(f"\n   ✓ FRED observation as-of: {payload.get('as_of_date', 'N/A')}")
         print(f"   ✓ Saved to {outp}")
+        # Refresh the tracked (committed) fallback cache on every genuine
+        # success, so environments where the live fetch fails (e.g. FRED
+        # deprioritizing a CI provider's IP range) still fall back to recent
+        # real data instead of a hardcoded constant.
+        try:
+            curve = TreasuryZeroCurve.from_saved_dict(payload)
+            save_yield_curve_fallback_cache(curve, YIELD_CURVE_FALLBACK_PATH)
+            print(f"   ✓ Updated fallback cache: {YIELD_CURVE_FALLBACK_PATH.name}")
+        except Exception as cache_err:
+            print(f"   ⚠ Could not update fallback cache: {cache_err}")
         return payload
     except Exception as e:
         print(f"\n   ✗ Could not fetch fresh yield curve: {e}")

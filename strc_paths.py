@@ -11,6 +11,12 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = PROJECT_ROOT / "output"
+
+# Tracked (committed) last-known-good Treasury curve — NOT under output/, which
+# is entirely gitignored. Used as a fallback when a live FRED fetch fails (e.g.
+# the network path from a given environment to FRED is slow/blocked), so the
+# discount rate degrades to recent real data instead of a hardcoded constant.
+YIELD_CURVE_FALLBACK_PATH = PROJECT_ROOT / "yield_curve_fallback.json"
 CACHE_DIR = OUTPUT_DIR / "cache"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 PLOTS_DIR = OUTPUT_DIR / "plots"

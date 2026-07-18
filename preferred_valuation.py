@@ -13,10 +13,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from strc_paths import OUTPUT_DIR
+from strc_paths import OUTPUT_DIR, YIELD_CURVE_FALLBACK_PATH
 
-# Fallback when yield_curve.json is missing/unreadable (e.g. before the first
-# fetch_data.py run). Not otherwise used once a live curve is available.
+# Last resort: used only if neither today's live curve nor the tracked
+# fallback cache (yield_curve_fallback.json) is available — e.g. a fresh
+# environment before any fetch has ever succeeded.
 DEFAULT_DISCOUNT_RATE_ANNUAL = 0.04159
 
 # Longest pillar FRED's constant-maturity Treasury series publishes (DGS30).
@@ -26,24 +27,38 @@ DEFAULT_DISCOUNT_RATE_ANNUAL = 0.04159
 DISCOUNT_RATE_TENOR_YEARS = 30.0
 
 
-def _live_discount_rate_annual(output_dir: Path = OUTPUT_DIR) -> float:
-    """Long-run discount rate from the live Treasury zero curve (annually compounded).
+def _curve_to_annual_rate(curve: Any) -> float | None:
+    """TreasuryZeroCurve's continuous rate -> the annual-compounding convention
+    Configuration expects. None if the curve doesn't yield a finite rate."""
+    continuous_rate = curve.equivalent_constant_rate(DISCOUNT_RATE_TENOR_YEARS)
+    if not math.isfinite(continuous_rate):
+        return None
+    return math.exp(continuous_rate) - 1
 
-    Falls back to DEFAULT_DISCOUNT_RATE_ANNUAL if yield_curve.json is missing,
-    unreadable, or doesn't yield a finite rate.
+
+def _live_discount_rate_annual(output_dir: Path = OUTPUT_DIR) -> float:
+    """Long-run discount rate from the Treasury zero curve (annually compounded).
+
+    Tries, in order: (1) today's live-fetched output/yield_curve.json, (2) the
+    tracked/committed yield_curve_fallback.json — last known good from any
+    environment where a fetch previously succeeded, refreshed automatically
+    on every successful fetch (see fetch_data.py) — (3) DEFAULT_DISCOUNT_RATE_ANNUAL.
+    A stale committed curve is still real market data and meaningfully closer
+    to current than a constant that's never updated.
     """
     from fetch_treasury_zero_yieldcurve import load_yield_curve_json
 
-    try:
-        curve, _err = load_yield_curve_json(output_dir / "yield_curve.json")
+    for path in (output_dir / "yield_curve.json", YIELD_CURVE_FALLBACK_PATH):
+        try:
+            curve, _err = load_yield_curve_json(path)
+        except Exception:
+            continue
         if curve is None:
-            return DEFAULT_DISCOUNT_RATE_ANNUAL
-        continuous_rate = curve.equivalent_constant_rate(DISCOUNT_RATE_TENOR_YEARS)
-        if not math.isfinite(continuous_rate):
-            return DEFAULT_DISCOUNT_RATE_ANNUAL
-        return math.exp(continuous_rate) - 1
-    except Exception:
-        return DEFAULT_DISCOUNT_RATE_ANNUAL
+            continue
+        rate = _curve_to_annual_rate(curve)
+        if rate is not None:
+            return rate
+    return DEFAULT_DISCOUNT_RATE_ANNUAL
 
 
 @dataclass
