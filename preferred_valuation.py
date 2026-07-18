@@ -67,6 +67,7 @@ class PreferredIssuerConfig:
             "sata_dividend_rate": self.annual_dividend_rate,
             "bitcoin_holdings": self.bitcoin_holdings,
             "cash": self.cash_reserve,
+            "discount_rate_annual": self.discount_rate_annual,
         }
         if self.market_price is not None:
             overrides["sata_current_price"] = self.market_price

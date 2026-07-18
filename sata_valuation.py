@@ -97,6 +97,18 @@ def _load_treasury_defaults(data_dir: Optional[str] = None) -> Dict[str, Any]:
             return {}
 
 
+def _resolve_discount_rate_annual(data_dir: Optional[str] = None) -> float:
+    """Live Treasury zero-curve discount rate; falls back to a fixed default.
+
+    Reuses preferred_valuation's curve-loading logic (single source of truth)
+    rather than duplicating it here.
+    """
+    from preferred_valuation import _live_discount_rate_annual
+
+    root = Path(data_dir) if data_dir else DEFAULT_OUTPUT_DIR
+    return _live_discount_rate_annual(root)
+
+
 # ============================================================================
 # CONFIGURATION MANAGEMENT
 # ============================================================================
@@ -114,8 +126,10 @@ class Configuration:
                  initial_bitcoin_holdings: float = 19032.3,
                  initial_cash_reserve: float = 186_400_000.0,
 
-                 # Financial Parameters
-                 discount_rate_annual: float = 0.04159,
+                 # Financial Parameters. None = resolve from the live Treasury
+                 # zero curve (see _resolve_discount_rate_annual); pass a float
+                 # explicitly to pin a specific rate (e.g. sensitivity testing).
+                 discount_rate_annual: Optional[float] = None,
 
                  # Dividend Parameters
                  dividend_suspension_threshold_multiplier: float = 1,
@@ -149,8 +163,15 @@ class Configuration:
         self.initial_bitcoin_holdings = overrides.get('bitcoin_holdings', initial_bitcoin_holdings)
         self.initial_cash_reserve = overrides.get('cash', initial_cash_reserve)
 
-        # Financial Parameters
-        self.discount_rate_annual = discount_rate_annual
+        # Financial Parameters. Precedence: explicit overrides dict entry >
+        # explicit constructor kwarg > live Treasury curve > hardcoded fallback
+        # (the last two both handled inside _resolve_discount_rate_annual).
+        if 'discount_rate_annual' in overrides:
+            self.discount_rate_annual = overrides['discount_rate_annual']
+        elif discount_rate_annual is not None:
+            self.discount_rate_annual = discount_rate_annual
+        else:
+            self.discount_rate_annual = _resolve_discount_rate_annual(data_dir)
 
         # Dividend Parameters
         self.dividend_suspension_threshold_multiplier = dividend_suspension_threshold_multiplier
