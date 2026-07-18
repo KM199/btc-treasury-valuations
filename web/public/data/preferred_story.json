@@ -1,10 +1,10 @@
 {
-  "as_of": "2026-07-18T01:52:55.942855+00:00",
+  "as_of": "2026-07-18T03:32:22.236975+00:00",
   "issuers": {
     "SATA": {
       "ticker": "SATA",
       "status": "ready",
-      "valuation_as_of": "2026-07-18T01:52:41.953454",
+      "valuation_as_of": "2026-07-18T03:32:06.731681",
       "configuration": {
         "num_simulations": 10000,
         "simulation_years": 100,
@@ -1238,7 +1238,7 @@
     "STRC": {
       "ticker": "STRC",
       "status": "ready",
-      "valuation_as_of": "2026-07-18T01:52:54.524991",
+      "valuation_as_of": "2026-07-18T03:32:19.878691",
       "configuration": {
         "discount_rate_annual": 0.04159,
         "shares_outstanding": 104894705,
@@ -2462,24 +2462,24 @@
     "SATA"
   ],
   "hedge": {
-    "btc_price": 63922.078125,
+    "btc_price": 63913.51953125,
     "STRC": {
       "strc_price": 85.29000091552734,
       "monthly_dividend_per_share": 1.0,
       "cash_covered_dividend_per_share": 20.83099753718472,
       "usd_months_dividend_coverage": 20.83099753718472,
       "hedge_amount_per_share": 64.45900337834263,
-      "btc_spot": 63922.078125,
+      "btc_spot": 63913.51953125,
       "btc_par": 18354.64359574531,
       "btc_zero": 5923.046902314006,
-      "buffer_to_par_pct": -71.28590913478644,
-      "buffer_to_zero_pct": -90.73395753696954,
+      "buffer_to_par_pct": -71.2820640603731,
+      "buffer_to_zero_pct": -90.73271673074117,
       "seniors": "Converts + STRF",
       "mstr_price": 94.8499984741211,
       "mstr_reference_strike": 71.6840931697786,
       "ibit_price": 36.349998474121094,
-      "ibit_at_par": 10.403910290510535,
-      "ibit_at_zero": 3.33454499307064,
+      "ibit_at_par": 10.40530346745089,
+      "ibit_at_zero": 3.3349915185654977,
       "ibit_spreads": [
         {
           "long": 12.0,
@@ -2500,7 +2500,7 @@
       "claim_usd": 782950000.0,
       "btc_full": 29380.552763819094,
       "btc_zero": null,
-      "buffer_to_full_pct": -54.036924916043475,
+      "buffer_to_full_pct": -54.030770047871144,
       "buffer_to_zero_pct": null
     },
     "strc_three_leg": {
@@ -2565,7 +2565,7 @@
           "second_last_expiration": "2026-09-18",
           "wipeout_price": null,
           "hedge_reference_strike": null,
-          "optimal_strike": 11.420833149095396,
+          "optimal_strike": 11.42228190800762,
           "best": {
             "strike_label": "65.0",
             "strike": 65.0,
@@ -2737,9 +2737,9 @@
           "spot": 36.349998474121094,
           "last_expiration": "2028-12-15",
           "second_last_expiration": "2028-06-16",
-          "wipeout_price": 3.33454499307064,
+          "wipeout_price": 3.3349915185654977,
           "hedge_reference_strike": null,
-          "optimal_strike": 4.86747875585062,
+          "optimal_strike": 4.868096206708675,
           "best": {
             "strike_label": "10/5",
             "strike": 10.0,
@@ -2869,8 +2869,8 @@
       "pnl_series": [
         {
           "shock_pct": -50,
-          "option_pnl": 6789.15,
-          "pnl": 6789.15
+          "option_pnl": 6789.16,
+          "pnl": 6789.16
         },
         {
           "shock_pct": -40,
@@ -2879,18 +2879,18 @@
         },
         {
           "shock_pct": -30,
-          "option_pnl": 3174.27,
-          "pnl": 3174.27
+          "option_pnl": 3174.25,
+          "pnl": 3174.25
         },
         {
           "shock_pct": -20,
-          "option_pnl": 1888.97,
-          "pnl": 1888.97
+          "option_pnl": 1888.96,
+          "pnl": 1888.96
         },
         {
           "shock_pct": -10,
-          "option_pnl": 836.38,
-          "pnl": 836.38
+          "option_pnl": 836.39,
+          "pnl": 836.39
         },
         {
           "shock_pct": 0,
@@ -2899,28 +2899,28 @@
         },
         {
           "shock_pct": 10,
-          "option_pnl": -678.32,
-          "pnl": -678.32
+          "option_pnl": -678.29,
+          "pnl": -678.29
         },
         {
           "shock_pct": 20,
-          "option_pnl": -1273.78,
-          "pnl": -1273.78
+          "option_pnl": -1273.73,
+          "pnl": -1273.73
         },
         {
           "shock_pct": 30,
-          "option_pnl": -1716.63,
-          "pnl": -1716.63
+          "option_pnl": -1716.56,
+          "pnl": -1716.56
         },
         {
           "shock_pct": 40,
-          "option_pnl": -2131.61,
-          "pnl": -2131.61
+          "option_pnl": -2131.54,
+          "pnl": -2131.54
         },
         {
           "shock_pct": 50,
-          "option_pnl": -2438.04,
-          "pnl": -2438.04
+          "option_pnl": -2437.92,
+          "pnl": -2437.92
         }
       ],
       "ladder": [
@@ -13816,10 +13816,10 @@
     },
     "note": "Baseline (0% start) path fan \u2014 sample paths, mean, median, and cross-sectional percentiles (p5/p25/p75/p95). Full Monte Carlo stays in output/*.npy.",
     "historical_distribution": {
-      "mean": 0.03596479072154734,
-      "std": 0.19332286702575366,
-      "skew": 0.005017880692144081,
-      "kurtosis": 0.20226976793184503,
+      "mean": 0.035963697397349455,
+      "std": 0.19332257398584599,
+      "skew": 0.005033884693298922,
+      "kurtosis": 0.20228924643521928,
       "n_months": 142,
       "start": "2014-09-17",
       "end": "2026-07-18"
