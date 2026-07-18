@@ -379,7 +379,7 @@ export function PreferredsView({
                 value={formatCompact(Number(cfg.initial_cash_reserve))}
               />
               <Fact
-                label="Flat discount (annual)"
+                label="30Y reference rate"
                 value={`${(Number(cfg.discount_rate_annual) * 100).toFixed(2)}%`}
               />
               <Fact
@@ -393,11 +393,13 @@ export function PreferredsView({
             </div>
             <div className="mt-6 space-y-3 text-sm text-mist-400">
               <p>
-                <span className="text-mist-200">Discount:</span> one flat annual
-                rate, compounded monthly into constant discount factors. Set from
-                the live Treasury zero curve&apos;s 30-year point (the longest
-                published tenor) — a flat rate for the whole horizon, not the
-                full curve shape month by month.
+                <span className="text-mist-200">Discount:</span> the live
+                Treasury zero curve, applied month by month — a 1-month
+                cash flow discounts at ~the 1-month rate, not the same rate
+                used 300 months out. Beyond the last published tenor (30
+                years) the curve flattens; the 30Y reference rate above is
+                that anchor point, shown for context, not the rate used
+                for every month.
               </p>
               <p>
                 <span className="text-mist-200">Payment logic:</span> each month,

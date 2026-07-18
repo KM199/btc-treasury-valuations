@@ -27,38 +27,75 @@ DEFAULT_DISCOUNT_RATE_ANNUAL = 0.04159
 DISCOUNT_RATE_TENOR_YEARS = 30.0
 
 
-def _curve_to_annual_rate(curve: Any) -> float | None:
-    """TreasuryZeroCurve's continuous rate -> the annual-compounding convention
-    Configuration expects. None if the curve doesn't yield a finite rate."""
-    continuous_rate = curve.equivalent_constant_rate(DISCOUNT_RATE_TENOR_YEARS)
+def live_yield_curve(output_dir: str | Path = OUTPUT_DIR) -> Any | None:
+    """The best available TreasuryZeroCurve, or None if none is available.
+
+    Tries, in order: (1) today's live-fetched output/yield_curve.json, (2) the
+    tracked/committed yield_curve_fallback.json — last known good from any
+    environment where a fetch previously succeeded, refreshed automatically
+    on every successful fetch (see fetch_data.py). A stale committed curve is
+    still real market data and meaningfully closer to current than a constant
+    that's never updated.
+    """
+    from fetch_treasury_zero_yieldcurve import load_yield_curve_json
+
+    output_dir = Path(output_dir) if output_dir else OUTPUT_DIR
+    for path in (output_dir / "yield_curve.json", YIELD_CURVE_FALLBACK_PATH):
+        try:
+            curve, _err = load_yield_curve_json(path)
+        except Exception:
+            continue
+        if curve is not None:
+            return curve
+    return None
+
+
+def _curve_to_annual_rate(curve: Any, tenor_years: float) -> float | None:
+    """TreasuryZeroCurve's continuous rate at tenor_years -> the annual-
+    compounding convention Configuration expects. None if not finite."""
+    continuous_rate = curve.equivalent_constant_rate(tenor_years)
     if not math.isfinite(continuous_rate):
         return None
     return math.exp(continuous_rate) - 1
 
 
 def _live_discount_rate_annual(output_dir: Path = OUTPUT_DIR) -> float:
-    """Long-run discount rate from the Treasury zero curve (annually compounded).
+    """30-year point on the best available Treasury curve, annually compounded.
 
-    Tries, in order: (1) today's live-fetched output/yield_curve.json, (2) the
-    tracked/committed yield_curve_fallback.json — last known good from any
-    environment where a fetch previously succeeded, refreshed automatically
-    on every successful fetch (see fetch_data.py) — (3) DEFAULT_DISCOUNT_RATE_ANNUAL.
-    A stale committed curve is still real market data and meaningfully closer
-    to current than a constant that's never updated.
+    This is a SUMMARY figure for display/reporting only (e.g. the site's
+    reference-rate label) — actual NPV discounting uses the full curve term
+    structure month by month (see monthly_discount_factors_from_curve), not
+    this single flattened number. Falls back to DEFAULT_DISCOUNT_RATE_ANNUAL
+    if no curve is available at all.
     """
-    from fetch_treasury_zero_yieldcurve import load_yield_curve_json
-
-    for path in (output_dir / "yield_curve.json", YIELD_CURVE_FALLBACK_PATH):
-        try:
-            curve, _err = load_yield_curve_json(path)
-        except Exception:
-            continue
-        if curve is None:
-            continue
-        rate = _curve_to_annual_rate(curve)
+    curve = live_yield_curve(output_dir)
+    if curve is not None:
+        rate = _curve_to_annual_rate(curve, DISCOUNT_RATE_TENOR_YEARS)
         if rate is not None:
             return rate
     return DEFAULT_DISCOUNT_RATE_ANNUAL
+
+
+def monthly_discount_factors_from_curve(curve: Any, total_months: int):
+    """Per-month discount factors from the actual curve term structure.
+
+    discount_factors[t] = 1 / curve.discount(T) for T = (t+1)/12 years, so
+    calculate_npv_matrix_multiplication's cash_flows / discount_factors gives
+    the correct PV at each month's own point on the curve — a 1-month cash
+    flow is discounted at the ~1-month rate, not the same 30-year rate used
+    for a cash flow 300 months out. Returns None if the curve can't produce a
+    finite factor for every month (caller should fall back to a flat rate).
+    """
+    import numpy as np
+
+    months = np.arange(1, total_months + 1, dtype=float)
+    factors = np.empty(total_months, dtype=float)
+    for i, t_years in enumerate(months / 12.0):
+        d = curve.discount(t_years)
+        if not math.isfinite(d) or d <= 0:
+            return None
+        factors[i] = 1.0 / d
+    return factors
 
 
 @dataclass

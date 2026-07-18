@@ -1244,7 +1244,7 @@ def run_baseline_analysis(baseline_price_paths: np.ndarray, config_dict: Dict[st
     full_payment_mask = months_dividends_paid == config_dict['total_months']
     print(f"  Average months paid: {months_dividends_paid.mean():.1f}")
     print(f"  Median months paid: {np.median(months_dividends_paid):.1f}")
-    print(f"  Average NPV per share: ${npvs.mean():,.2f}")
+    print(f"  Average NPV per share: ${(npvs / config_dict['sata_shares_outstanding']).mean():,.2f}")
     print(f"  Simulations that paid full period: {full_payment_mask.sum():,} ({full_payment_mask.mean()*100:.1f}%)")
 
     return months_dividends_paid, final_bitcoin_holdings, final_cash_reserve, accumulated_unpaid_dividends_final, npvs
@@ -1494,10 +1494,23 @@ def main() -> None:
     num_workers = args.num_workers or config.default_num_workers or cpu_count()
     print(f"Using {num_workers} worker processes")
 
-    # Pre-compute discount factors once - they never change across all scenarios
+    # Pre-compute discount factors once - they never change across all scenarios.
+    # Term-structure-aware: each month is discounted at the curve's own rate
+    # for that horizon (a 1-month cash flow at ~the 1-month rate, not the same
+    # 30-year rate used 300 months out), not a single flat rate compounded
+    # uniformly. Falls back to the flat rate if no curve is available at all.
     total_months = config_dict['total_months']
-    monthly_discount_rate = config_dict['monthly_discount_rate']
-    discount_factors = np.power(1 + monthly_discount_rate, np.arange(1, total_months + 1))
+    from preferred_valuation import live_yield_curve, monthly_discount_factors_from_curve
+    curve = live_yield_curve(args.data_dir)
+    discount_factors = (
+        monthly_discount_factors_from_curve(curve, total_months) if curve is not None else None
+    )
+    if discount_factors is not None:
+        print(f"  Discount factors: term-structure (Treasury curve as of {curve.as_of_date})")
+    else:
+        monthly_discount_rate = config_dict['monthly_discount_rate']
+        discount_factors = np.power(1 + monthly_discount_rate, np.arange(1, total_months + 1))
+        print(f"  Discount factors: flat {config.discount_rate_annual:.2%} (no curve available)")
     config_dict['discount_factors'] = discount_factors  # Add to config for reuse
     
     months_dividends_paid, final_bitcoin_holdings, final_cash_reserve, accumulated_unpaid_dividends_final, npvs = run_baseline_analysis(baseline_price_paths, config_dict, num_workers)
