@@ -434,14 +434,19 @@ def load_price_paths(data_dir: Optional[str] = None) -> Dict[str, Any]:
             all_price_paths = np.load(price_paths_file, mmap_mode='r')
         else:
             all_price_paths = np.load(price_paths_file)
-        
-        # Convert to list of scenario dictionaries for compatibility
+
+        # Convert to list of scenario dictionaries for compatibility. Keep each
+        # scenario's price paths as an ndarray (not .tolist()) — every consumer
+        # (simulate_unified_worker, the baseline lookup below) immediately wraps
+        # it in np.array() anyway, and materializing 21 scenarios x 10,000 sims
+        # x 1,200 months as individual Python floats uses ~8x the memory of the
+        # equivalent float32/float64 array, which was OOM-killing this step in CI.
         scenarios = []
         for i in range(num_scenarios):
             scenarios.append({
                 'starting_price_pct': float(starting_price_pcts[i]),
                 'starting_price': float(starting_prices[i]),
-                'price_paths': all_price_paths[i].tolist()
+                'price_paths': all_price_paths[i]
             })
         
         print(f"✓ Successfully loaded {num_scenarios} scenarios from split files!")
