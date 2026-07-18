@@ -394,8 +394,10 @@ export function PreferredsView({
             <div className="mt-6 space-y-3 text-sm text-mist-400">
               <p>
                 <span className="text-mist-200">Discount:</span> one flat annual
-                rate, compounded monthly into constant discount factors. Not the
-                Treasury zero curve (that curve is for option Greeks elsewhere).
+                rate, compounded monthly into constant discount factors. Set from
+                the live Treasury zero curve&apos;s 30-year point (the longest
+                published tenor) — a flat rate for the whole horizon, not the
+                full curve shape month by month.
               </p>
               <p>
                 <span className="text-mist-200">Payment logic:</span> each month,

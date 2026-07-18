@@ -8,11 +8,42 @@ two copy-pasted dividend loops.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Optional
 
 from strc_paths import OUTPUT_DIR
+
+# Fallback when yield_curve.json is missing/unreadable (e.g. before the first
+# fetch_data.py run). Not otherwise used once a live curve is available.
+DEFAULT_DISCOUNT_RATE_ANNUAL = 0.04159
+
+# Longest pillar FRED's constant-maturity Treasury series publishes (DGS30).
+# The coupon stream being discounted is defaultable and heavily front-loaded
+# in PV terms (not a true 100-year cash flow), so the longest live market
+# rate available is a reasonable flat-rate proxy for the whole horizon.
+DISCOUNT_RATE_TENOR_YEARS = 30.0
+
+
+def _live_discount_rate_annual(output_dir: Path = OUTPUT_DIR) -> float:
+    """Long-run discount rate from the live Treasury zero curve (annually compounded).
+
+    Falls back to DEFAULT_DISCOUNT_RATE_ANNUAL if yield_curve.json is missing,
+    unreadable, or doesn't yield a finite rate.
+    """
+    from fetch_treasury_zero_yieldcurve import load_yield_curve_json
+
+    try:
+        curve, _err = load_yield_curve_json(output_dir / "yield_curve.json")
+        if curve is None:
+            return DEFAULT_DISCOUNT_RATE_ANNUAL
+        continuous_rate = curve.equivalent_constant_rate(DISCOUNT_RATE_TENOR_YEARS)
+        if not math.isfinite(continuous_rate):
+            return DEFAULT_DISCOUNT_RATE_ANNUAL
+        return math.exp(continuous_rate) - 1
+    except Exception:
+        return DEFAULT_DISCOUNT_RATE_ANNUAL
 
 
 @dataclass
@@ -27,7 +58,7 @@ class PreferredIssuerConfig:
     par_value: float = 100.0
     market_price: float | None = None
     dividend_suspension_threshold_multiplier: float = 1.0
-    discount_rate_annual: float = 0.04159
+    discount_rate_annual: float = DEFAULT_DISCOUNT_RATE_ANNUAL
 
     def to_configuration_overrides(self) -> dict[str, Any]:
         """Map onto ``sata_valuation.Configuration`` override keys."""
@@ -63,6 +94,7 @@ def load_sata_issuer(output_dir: Path = OUTPUT_DIR) -> PreferredIssuerConfig:
         bitcoin_holdings=float(data.get("btc_holdings") or 19_032.3),
         cash_reserve=float(data.get("cash") or 186_400_000.0),
         market_price=float(data["sata_price"]) if data.get("sata_price") is not None else None,
+        discount_rate_annual=_live_discount_rate_annual(output_dir),
     )
 
 
@@ -109,6 +141,7 @@ def load_strc_issuer(output_dir: Path = OUTPUT_DIR) -> PreferredIssuerConfig:
         bitcoin_holdings=btc,
         cash_reserve=cash,
         market_price=float(price) if price is not None else None,
+        discount_rate_annual=_live_discount_rate_annual(output_dir),
     )
 
 
