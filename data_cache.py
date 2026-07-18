@@ -11,7 +11,8 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-_cache_lock = threading.Lock()
+_cache_lock = threading.Lock()  # guards _key_locks dict mutation only
+_key_locks: dict[str, threading.Lock] = {}
 _run_hits: set[str] = set()
 _run_fresh: set[str] = set()
 _hits_lock = threading.Lock()
@@ -102,7 +103,11 @@ def read_cache(key: str) -> Any | None:
 
 
 def write_cache(key: str, data: Any) -> None:
-    """Serialize and persist data with a sidecar metadata file."""
+    """Serialize and persist data with a sidecar metadata file.
+
+    Writes go to a temp file and then an atomic rename, so a concurrent reader
+    (possibly in another process) never observes a partially-written file.
+    """
     ensure_output_dirs()
     data_path = cache_path(key)
     meta_path = _meta_path(key)
@@ -112,10 +117,25 @@ def write_cache(key: str, data: Any) -> None:
     else:
         payload = data
 
-    with data_path.open("w") as f:
+    tmp_data = data_path.with_suffix(data_path.suffix + ".tmp")
+    with tmp_data.open("w") as f:
         json.dump(payload, f)
-    with meta_path.open("w") as f:
+    tmp_data.replace(data_path)
+
+    tmp_meta = meta_path.with_suffix(meta_path.suffix + ".tmp")
+    with tmp_meta.open("w") as f:
         json.dump({"key": key, "fetched_at": time.time()}, f)
+    tmp_meta.replace(meta_path)
+
+
+def _lock_for_key(key: str) -> threading.Lock:
+    """Return a lock private to this cache key, creating it on first use."""
+    with _cache_lock:
+        lock = _key_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _key_locks[key] = lock
+        return lock
 
 
 def get_or_fetch(
@@ -124,22 +144,25 @@ def get_or_fetch(
     ttl: int = DEFAULT_CACHE_TTL_SECONDS,
     force_refresh: bool = False,
 ) -> Any:
-    """Return cached data when fresh; otherwise call fetch_fn and cache result."""
-    if not force_refresh:
-        with _cache_lock:
-            if is_fresh(key, ttl):
-                cached = read_cache(key)
-                if cached is not None:
-                    print(f"  ✓ Cache hit: {key}")
-                    _record_cache_hit(key)
-                    return cached
+    """Return cached data when fresh; otherwise call fetch_fn and cache result.
 
-    data = fetch_fn()
-    _record_fresh_fetch(key)
+    The whole check-then-fetch-then-write sequence is serialized per cache key,
+    so concurrent callers requesting the same key (e.g. two ThreadPoolExecutor
+    tasks that happen to share a key) don't both miss and both hit the network —
+    only the first pays the fetch cost; the rest block and then see its result.
+    """
+    with _lock_for_key(key):
+        if not force_refresh and is_fresh(key, ttl):
+            cached = read_cache(key)
+            if cached is not None:
+                print(f"  ✓ Cache hit: {key}")
+                _record_cache_hit(key)
+                return cached
 
-    with _cache_lock:
+        data = fetch_fn()
+        _record_fresh_fetch(key)
         write_cache(key, data)
-    return data
+        return data
 
 
 def cached_http_get(

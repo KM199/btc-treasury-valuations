@@ -350,7 +350,10 @@ def fetch_mstr_share_dilution(*, force_refresh: bool = False) -> dict[str, Any] 
 
     try:
         html = get_or_fetch(
-            "strategy_com_shares_html",
+            # Same cache key fetch_mstr_treasury.py uses for this identical URL, so
+            # the two callers share one cached response instead of both hitting
+            # strategy.com/shares live within the same fetch_data.py run.
+            "strategy_com_shares",
             lambda: _fetch_text("https://www.strategy.com/shares", _STRATEGY_HEADERS),
             force_refresh=force_refresh,
         )

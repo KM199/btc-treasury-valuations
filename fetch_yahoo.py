@@ -74,18 +74,23 @@ def load_btc_spot(
     force_refresh: bool = False,
     fallback: float = DEFAULT_BTC_FALLBACK,
     log: bool = True,
-) -> float:
+    return_source: bool = False,
+) -> float | tuple[float, str]:
     """Yahoo BTC-USD first (live when force_refresh); else btc_historical_data.json.
 
     Prefer live/cached Yahoo over historical JSON so path generation and the site
     do not silently reuse a weeks-old ``current_price`` snapshot.
+
+    When ``return_source`` is True, returns ``(price, source)`` instead of a bare
+    float — callers that disclose the price's provenance (e.g. "(live)" labels)
+    must not assume a live Yahoo quote when the cached/fallback path was used.
     """
     price = yahoo_spot_price("BTC-USD", force_refresh=force_refresh)
     if price is not None:
         if log:
             src = "Yahoo (fresh)" if force_refresh else "Yahoo"
             print(f"  ✓ Current Bitcoin price ({src}): ${price:,.2f}")
-        return price
+        return (price, "Yahoo BTC-USD (live)") if return_source else price
     cached = load_json_price(output_dir / "btc_historical_data.json")
     if cached is not None:
         if log:
@@ -93,7 +98,7 @@ def load_btc_spot(
                 f"  ✓ Bitcoin price from {output_dir / 'btc_historical_data.json'}: "
                 f"${cached:,.2f}"
             )
-        return cached
+        return (cached, "Cached (Yahoo Finance returned no data)") if return_source else cached
     if log:
         print(f"  ⚠ Using fallback Bitcoin price: ${fallback:,.2f}")
-    return fallback
+    return (fallback, "Default (Yahoo Finance error)") if return_source else fallback

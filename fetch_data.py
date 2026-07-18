@@ -51,7 +51,7 @@ YIELD_CURVE_CACHE_KEY = "treasury_yield_curve"
 MARKET_CACHE_KEYS: dict[str, tuple[str, ...]] = {
     "mstr": ("yahoo_history_MSTR_1d", "yahoo_options_MSTR"),
     "strc": ("yahoo_history_STRC_1d", "yahoo_options_STRC", "strategy_com_home"),
-    "ibit": ("yahoo_history_IBIT_1d", "yahoo_options_IBIT"),
+    "ibit": ("yahoo_history_IBIT_1d", "yahoo_options_IBIT", "yahoo_history_BTC-USD_1d"),
 }
 
 
@@ -307,8 +307,17 @@ def fetch_ibit_data(output_dir: Path, *, force_refresh: bool = False):
         print("   ⚠ Could not fetch price data")
 
     print("\n2. Fetching BTC price...")
-    btc_price = load_btc_spot(output_dir, force_refresh=force_refresh)
-    
+    btc_price, btc_price_source = load_btc_spot(
+        output_dir, force_refresh=force_refresh, log=False, return_source=True
+    )
+    if btc_price_source != "Yahoo BTC-USD (live)" and current_price is not None:
+        # BTC-USD ticker failed but we already have a live IBIT quote — derive an
+        # accurate implied BTC price from it instead of using a stale/fallback price.
+        btc_price = current_price / BTC_PER_SHARE
+        print(f"   ⚠ BTC-USD fetch unavailable ({btc_price_source}); derived from live IBIT quote: ${btc_price:,.2f}")
+    else:
+        print(f"   ✓ BTC price: ${btc_price:,.2f} ({btc_price_source})")
+
     # Fetch options data
     print("\n3. Fetching IBIT options expirations...")
     options_data, expirations = fetch_options_chain(ibit, "IBIT", force_refresh=force_refresh)

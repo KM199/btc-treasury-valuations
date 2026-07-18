@@ -520,10 +520,9 @@ def main():
 
     # Live Yahoo spot (same source as export_site_data) — never trust a stale
     # btc_historical_data.json current_price for path starting levels.
-    CURRENT_BITCOIN_PRICE = load_btc_spot(
-        artifact_dir, force_refresh=True, log=False
+    CURRENT_BITCOIN_PRICE, btc_price_source = load_btc_spot(
+        artifact_dir, force_refresh=True, log=False, return_source=True
     )
-    btc_price_source = "Yahoo BTC-USD (live)"
     
     MONTHS_PER_YEAR = 12
     TOTAL_MONTHS = SIMULATION_YEARS * MONTHS_PER_YEAR
