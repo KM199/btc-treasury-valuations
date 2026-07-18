@@ -11,6 +11,7 @@ module.exports = {
           700: "#1a2233",
         },
         ember: {
+          300: "#f8bf9a",
           400: "#f0a46a",
           500: "#e8893a",
           600: "#c96a1e",
@@ -21,8 +22,11 @@ module.exports = {
         },
         mist: {
           100: "#e8eef8",
+          200: "#c1cdde",
           300: "#9aabc4",
+          400: "#8394ad",
           500: "#6b7c96",
+          600: "#54657f",
         },
       },
       fontFamily: {

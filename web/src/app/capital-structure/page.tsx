@@ -97,7 +97,7 @@ function WipeoutTable({
                 {layer.claim_usd == null ? "residual" : formatCompact(layer.claim_usd)}
               </td>
               <td className={`${cell} text-right text-ember-400`}>
-                {formatBtc(layer.btc_zero ?? 0)}
+                {formatBtc(layer.btc_zero)}
               </td>
               <td className={`${cell} text-right text-mist-400`}>
                 {formatBuffer(layer.buffer_to_zero_pct)}
