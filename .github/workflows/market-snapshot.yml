@@ -46,6 +46,21 @@ jobs:
           if git diff --staged --quiet; then
             echo "No market_snapshot changes"
           else
-            git commit -m "chore: refresh market_snapshot.json"
-            git push
+            # main moves under this job (overlapping runs of this same
+            # workflow, daily-valuation.yml, or a manual push) — retry
+            # against the latest tip instead of failing the whole job.
+            for i in 1 2 3 4 5; do
+              git commit -m "chore: refresh market_snapshot.json"
+              if git push; then
+                echo "Pushed successfully"
+                break
+              fi
+              echo "Push rejected (attempt $i/5) — retrying against latest main..."
+              git fetch origin main
+              git reset --soft origin/main
+              if [ "$i" = "5" ]; then
+                echo "::error::Failed to push after 5 attempts"
+                exit 1
+              fi
+            done
           fi

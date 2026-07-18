@@ -75,6 +75,21 @@ jobs:
           if git diff --staged --quiet; then
             echo "No fair_values / market changes"
           else
-            git commit -m "chore: refresh fair_values and market snapshot"
-            git push
+            # main moves under this job (this workflow's own overlapping runs,
+            # market-snapshot.yml, or a manual push) — retry against the
+            # latest tip instead of failing the whole job on a push race.
+            for i in 1 2 3 4 5; do
+              git commit -m "chore: refresh fair_values and market snapshot"
+              if git push; then
+                echo "Pushed successfully"
+                break
+              fi
+              echo "Push rejected (attempt $i/5) — retrying against latest main..."
+              git fetch origin main
+              git reset --soft origin/main
+              if [ "$i" = "5" ]; then
+                echo "::error::Failed to push after 5 attempts"
+                exit 1
+              fi
+            done
           fi
