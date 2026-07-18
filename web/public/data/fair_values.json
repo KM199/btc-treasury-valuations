@@ -1,24 +1,24 @@
 {
-  "as_of": "2026-07-18T03:46:25.439170+00:00",
+  "as_of": "2026-07-18T04:01:44.891346+00:00",
   "tickers": [
     {
       "ticker": "SATA",
       "market_price": 97.7300033569336,
-      "fair_value": 100.1640696548624,
-      "gap": 2.4340662979288084,
-      "gap_pct": 2.4906029001544283,
+      "fair_value": 93.39096057222154,
+      "gap": -4.339042784712049,
+      "gap_pct": -4.439826701800896,
       "source": "sata_valuation.py",
       "mean_months_paid": 86.8201,
       "median_months_paid": 51.0,
-      "valuation_vs_par": 0.16406965486239766,
-      "valuation_as_of": "2026-07-18T03:46:22.419547",
+      "valuation_vs_par": -6.609039427778452,
+      "valuation_as_of": "2026-07-18T04:01:43.323092",
       "scenarios": [],
       "npv_distribution": {
-        "mean": 100.1640696548624,
-        "median": 91.4095618071005,
-        "std": 60.167140259481286,
-        "vs_par": 0.16406965486239766,
-        "final_per_share": 100.1640696548624
+        "mean": 93.39096057222154,
+        "median": 86.39119687147593,
+        "std": 53.11044379150757,
+        "vs_par": -6.609039427778452,
+        "final_per_share": 93.39096057222154
       }
     },
     {
@@ -33,40 +33,40 @@
     {
       "ticker": "MSTR",
       "market_price": 94.8499984741211,
-      "fair_value": 98.88479729956146,
-      "gap": 4.034798825440362,
-      "gap_pct": 4.253873368844826,
+      "fair_value": 98.96835647062463,
+      "gap": 4.1183579965035335,
+      "gap_pct": 4.341969491572725,
       "source": "mstr_nav.rNAV_market",
       "fair_label": "rNAV mkt",
-      "rnav_face_per_share": 90.9631685119375,
-      "rnav_market_per_share": 98.88479729956146,
-      "rnav_face_total": 34610303097.60156,
-      "rnav_market_total": 37624379870.11824,
-      "premium_to_rnav_pct": -4.080302468758012,
-      "btc_value": 53916082085.35156
+      "rnav_face_per_share": 91.04672768300067,
+      "rnav_market_per_share": 98.96835647062463,
+      "rnav_face_total": 34642096275.921875,
+      "rnav_market_total": 37656173048.43855,
+      "premium_to_rnav_pct": -4.161287651296833,
+      "btc_value": 53947875263.671875
     },
     {
       "ticker": "ASST",
       "market_price": 11.859999656677246,
-      "fair_value": 8.199918362165636,
-      "gap": -3.6600812945116097,
-      "gap_pct": -30.86072007136158,
+      "fair_value": 8.208643575942897,
+      "gap": -3.651356080734349,
+      "gap_pct": -30.7871516562702,
       "source": "asst_nav.rNAV_market",
       "fair_label": "rNAV mkt",
-      "rnav_face_per_share": 7.993106735208129,
-      "rnav_market_per_share": 8.199918362165636,
-      "rnav_face_total": 686910103.90625,
-      "rnav_market_total": 704683042.6231384,
-      "premium_face_pct": 48.37784668176871,
-      "premium_market_pct": 44.63558212236842,
-      "btc_value": 1271583103.90625
+      "rnav_face_per_share": 8.001831948985389,
+      "rnav_market_per_share": 8.208643575942897,
+      "rnav_face_total": 687659929.6875,
+      "rnav_market_total": 705432868.4043884,
+      "premium_face_pct": 48.216055176978095,
+      "premium_market_pct": 44.481844618462816,
+      "btc_value": 1272332929.6875
     }
   ],
   "comparison": [
     {
       "ticker": "SATA",
       "market": 97.7300033569336,
-      "fair": 100.1640696548624
+      "fair": 93.39096057222154
     },
     {
       "ticker": "STRC",
@@ -76,21 +76,21 @@
     {
       "ticker": "MSTR",
       "market": 94.8499984741211,
-      "fair": 98.88479729956146
+      "fair": 98.96835647062463
     },
     {
       "ticker": "ASST",
       "market": 11.859999656677246,
-      "fair": 8.199918362165636
+      "fair": 8.208643575942897
     }
   ],
   "mstr_rnav": {
     "label": "rNAV",
     "description": "rNAV face: prefs at par + debt at face. rNAV market: prefs at market + debt at market. STRE always face*.",
     "btc_holdings": 843775.0,
-    "btc_price": 63898.6484375,
-    "btc_value": 53916082085.35156,
-    "mnav_total": 53916082085.35156,
+    "btc_price": 63936.328125,
+    "btc_value": 53947875263.671875,
+    "mnav_total": 53947875263.671875,
     "cash": 3000000000.0,
     "preferred_market_cap": 11887586002.483318,
     "preferred_face_cap": 14577935900.0,
@@ -118,21 +118,21 @@
     "mstr_market_cap": 36089191369.42291,
     "mstr_market_price": 94.8499984741211,
     "enterprise_value": 52380893584.656235,
-    "mnav_multiple": 0.9715263342342818,
-    "rnav_face_total": 34610303097.60156,
-    "rnav_market_total": 37624379870.11824,
-    "rnav_face_per_share": 90.9631685119375,
-    "rnav_market_per_share": 98.88479729956146,
-    "rnav_total": 37624379870.11824,
-    "rnav_per_share": 98.88479729956146,
-    "fair_value_per_share": 98.88479729956146,
-    "premium_to_rnav_pct": -4.080302468758012,
+    "mnav_multiple": 0.9709537832332233,
+    "rnav_face_total": 34642096275.921875,
+    "rnav_market_total": 37656173048.43855,
+    "rnav_face_per_share": 91.04672768300067,
+    "rnav_market_per_share": 98.96835647062463,
+    "rnav_total": 37656173048.43855,
+    "rnav_per_share": 98.96835647062463,
+    "fair_value_per_share": 98.96835647062463,
+    "premium_to_rnav_pct": -4.161287651296833,
     "mstr_shares": 380487000.0
   },
   "asst_rnav": {
     "btc_holdings": 19900.0,
-    "btc_price": 63898.6484375,
-    "btc_value": 1271583103.90625,
+    "btc_price": 63936.328125,
+    "btc_value": 1272332929.6875,
     "cash": 198277000.0,
     "debt": 0.0,
     "sata_shares": 7829500.0,
@@ -142,16 +142,16 @@
     "asst_shares": 85937812.0,
     "asst_price": 11.859999656677246,
     "asst_market_cap": 1019222420.8155937,
-    "rnav_face_total": 686910103.90625,
-    "rnav_market_total": 704683042.6231384,
-    "rnav_face_per_share": 7.993106735208129,
-    "rnav_market_per_share": 8.199918362165636,
-    "mnav_face": 1.2613374744352093,
-    "mnav_market": 1.2473604573906365,
-    "premium_face_pct": 48.37784668176871,
-    "premium_market_pct": 44.63558212236842,
-    "rnav_total": 704683042.6231384,
-    "rnav_per_share": 8.199918362165636,
-    "fair_value_per_share": 8.199918362165636
+    "rnav_face_total": 687659929.6875,
+    "rnav_market_total": 705432868.4043884,
+    "rnav_face_per_share": 8.001831948985389,
+    "rnav_market_per_share": 8.208643575942897,
+    "mnav_face": 1.2605941286212952,
+    "mnav_market": 1.2466253486721244,
+    "premium_face_pct": 48.216055176978095,
+    "premium_market_pct": 44.481844618462816,
+    "rnav_total": 705432868.4043884,
+    "rnav_per_share": 8.208643575942897,
+    "fair_value_per_share": 8.208643575942897
   }
 }
