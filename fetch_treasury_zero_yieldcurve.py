@@ -169,7 +169,10 @@ def fetch_fred_cm_yields(session: requests.Session | None = None) -> tuple[str, 
     def fetch() -> dict:
         sess = session or requests.Session()
         print("   Downloading FRED DGS yields (fredgraph.csv — can take 10–30s)...")
-        r = sess.get(FREDGRAPH_URL, headers=headers, timeout=45)
+        # 45s timed out 3/3 times in CI (fredgraph.csv is a multi-series full-
+        # history CSV and can run slower than the "typical" 10-30s from a
+        # GitHub Actions runner); 90s gives real headroom instead of a coin flip.
+        r = sess.get(FREDGRAPH_URL, headers=headers, timeout=90)
         r.raise_for_status()
         record_date, par = _parse_fredgraph_csv(r.text)
         return {"as_of_date": record_date, "par_yields_decimal": par}
