@@ -770,7 +770,8 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
         else:
             months_unpaid += 1
             compounded_rate = min(compounded_start_rate + (months_unpaid * compounded_increment), compounded_max_rate)
-            accumulated_unpaid_dividends += monthly_dividend_total * (1 + compounded_rate/12)
+            shortfall = monthly_dividend_total - month_dividend_paid
+            accumulated_unpaid_dividends += shortfall * (1 + compounded_rate/12)
             consecutive_insolvent_months += 1
 
     return months_paid, bitcoin_holdings, cash_reserve, accumulated_unpaid_dividends, cash_flows

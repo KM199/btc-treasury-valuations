@@ -120,19 +120,40 @@ def _config_snapshot(cfg: dict[str, Any]) -> dict[str, Any]:
         "compounded_dividend_max_rate",
     )
     out = {k: cfg.get(k) for k in keys if k in cfg}
-    # STRC configs may use different key prefixes — pass through common aliases
+    # STRC configs (strc_valuation.py) use plain, unprefixed key names instead of
+    # SATA's sata_-prefixed ones — alias them onto the same normalized fields.
     if "strc_shares_outstanding" in cfg:
         out["shares_outstanding"] = cfg["strc_shares_outstanding"]
     elif "sata_shares_outstanding" in cfg:
         out["shares_outstanding"] = cfg["sata_shares_outstanding"]
+    elif "shares" in cfg:
+        out["shares_outstanding"] = cfg["shares"]
     if "strc_annual_dividend_rate" in cfg:
         out["annual_dividend_rate"] = cfg["strc_annual_dividend_rate"]
     elif "sata_annual_dividend_rate" in cfg:
         out["annual_dividend_rate"] = cfg["sata_annual_dividend_rate"]
+    elif "annual_dividend_rate" in cfg:
+        out["annual_dividend_rate"] = cfg["annual_dividend_rate"]
     if "strc_monthly_dividend_per_share" in cfg:
         out["monthly_dividend_per_share"] = cfg["strc_monthly_dividend_per_share"]
     elif "sata_monthly_dividend_per_share" in cfg:
         out["monthly_dividend_per_share"] = cfg["sata_monthly_dividend_per_share"]
+    if "sata_par_value" in cfg:
+        out["par_value"] = cfg["sata_par_value"]
+    elif "par_value" in cfg:
+        out["par_value"] = cfg["par_value"]
+    if "initial_bitcoin_holdings" in cfg:
+        out["initial_bitcoin_holdings"] = cfg["initial_bitcoin_holdings"]
+    elif "bitcoin_holdings" in cfg:
+        out["initial_bitcoin_holdings"] = cfg["bitcoin_holdings"]
+    if "initial_cash_reserve" in cfg:
+        out["initial_cash_reserve"] = cfg["initial_cash_reserve"]
+    elif "cash_reserve" in cfg:
+        out["initial_cash_reserve"] = cfg["cash_reserve"]
+    if "dividend_suspension_threshold_multiplier" in cfg:
+        out["dividend_suspension_threshold_multiplier"] = cfg["dividend_suspension_threshold_multiplier"]
+    elif "threshold_multiplier" in cfg:
+        out["dividend_suspension_threshold_multiplier"] = cfg["threshold_multiplier"]
     return out
 
 

@@ -75,7 +75,7 @@ def strc_liquidation_per_share(btc_price: float, treas: dict) -> float:
 def strc_annual_dividend_per_share(treas: dict) -> float:
     eff = treas.get("strc_effective_yield")
     if eff is not None and float(eff) > 0:
-        return float(eff)
+        return float(eff) * STRC_PAR_VALUE
     return float(treas.get("strc_dividend_rate", 0) or 0) * STRC_PAR_VALUE
 
 

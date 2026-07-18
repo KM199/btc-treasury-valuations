@@ -24,6 +24,7 @@ from ibit_option_deltas import (
     year_fraction_to_expiry,
 )
 from mstr_liquidation import (
+    STRC_PAR_VALUE,
     ibit_price_strc_par,
     ibit_price_strc_zero,
     mstr_hedge_reference_strike,
@@ -482,7 +483,9 @@ def build_sata_ibit_hedge(
         rate = float(asst.get("sata_dividend_rate") or 0.13)
         if rate > 1:
             rate /= 100.0
-        sata_yield = sata_px * rate
+        # Dollar dividend is rate on par ($100), not rate on the fluctuating market
+        # price — matches strc_annual_dividend_per_share's par-based calculation.
+        sata_yield = STRC_PAR_VALUE * rate
 
     capital = float(hh.CAPITAL)
     margin = 0.15

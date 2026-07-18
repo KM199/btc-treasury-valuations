@@ -83,11 +83,15 @@ def load_strc_issuer(output_dir: Path = OUTPUT_DIR) -> PreferredIssuerConfig:
     rate = float(hedge.get("strc_dividend_rate") or enriched.get("strc_dividend_rate") or 0)
     if rate > 1:
         rate = rate / 100.0
-    # Prefer effective yield / par if dividend_rate looks like a decimal yield already
+    # Fall back to effective yield if dividend_rate is missing/out of range.
     eff = hedge.get("strc_effective_yield") or enriched.get("strc_effective_yield")
     if (rate <= 0 or rate > 0.5) and eff is not None:
-        # effective yield is $ per share annual; convert to rate on par
-        rate = float(eff) / 100.0
+        # strc_effective_yield is already a fractional rate (see
+        # fetch_mstr_treasury.py's parse_strc_metrics_from_tracker normalization) —
+        # only rescale it if it's ever supplied as a raw percentage number (>1).
+        rate = float(eff)
+        if rate > 1:
+            rate = rate / 100.0
 
     btc = float(hedge.get("btc_holdings") or enriched.get("bitcoin_holdings") or 0)
     cash = float(hedge.get("usd_reserve_usd") or enriched.get("cash") or 0)
