@@ -165,24 +165,22 @@ export function PreferredsView({
   const { asOf, instruments, live, error, btc } = useLiveQuotes(initialMarket);
 
   const sataStory = story.issuers.SATA;
-  const strcStory = story.issuers.STRC;
   const ready = sataStory?.status === "ready" ? sataStory : null;
 
   const sataPx =
     instruments.find((i) => i.ticker === "SATA")?.market_price ?? null;
-  const strcPx =
-    instruments.find((i) => i.ticker === "STRC")?.market_price ?? null;
 
   const sataFair =
     ready?.baseline?.fair_value ??
     fairFor(initialFair, "SATA")?.fair_value ??
     null;
-  const strcFair = fairFor(initialFair, "STRC")?.fair_value ?? null;
 
-  const premiumRows = [
-    { ticker: "STRC", market: strcPx, fair: strcFair },
-    { ticker: "SATA", market: sataPx, fair: sataFair },
-  ];
+  // STRC's model fair value is intentionally not shown: the engine assumes
+  // STRC has sole claim on MSTR's entire consolidated BTC/cash treasury, with
+  // no allowance for convertible debt, STRF, or the other preferred series
+  // that also sit ahead of or alongside it. Until the model accounts for
+  // MSTR's actual capital-structure seniority, its STRC output is misleading.
+  const premiumRows = [{ ticker: "SATA", market: sataPx, fair: sataFair }];
 
   const cfg = ready?.configuration || {};
   const scenarios = ready?.scenarios || [];
@@ -351,8 +349,10 @@ export function PreferredsView({
       <section className="mt-16">
         <h2 className="font-display text-3xl text-mist-100">Assumptions</h2>
         <p className="mt-2 text-mist-400">
-          Locked inputs for the SATA Monte Carlo. STRC uses the same engine when
-          its job finishes.
+          Locked inputs for the SATA Monte Carlo. STRC isn&apos;t modeled here
+          yet — MSTR&apos;s capital structure has senior debt and multiple
+          preferred series competing for the same treasury, which this engine
+          doesn&apos;t yet account for.
         </p>
         {ready ? (
           <>
@@ -660,7 +660,9 @@ export function PreferredsView({
           <p className="mt-6 text-sm text-mist-500">Baseline pending.</p>
         )}
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <PendingCard ticker="STRC" story={strcStory} />
+          <div className="border border-white/8 bg-ink-900/40 px-4 py-3 font-mono text-sm text-mist-500">
+            STRC: not modeled yet
+          </div>
           <div className="border border-white/8 bg-ink-900/40 px-4 py-3 font-mono text-sm text-mist-400">
             SATA mean NPV {formatUsd(ready?.baseline?.mean_npv)} · median{" "}
             {formatUsd(ready?.baseline?.median_npv)}
@@ -678,7 +680,7 @@ export function PreferredsView({
           <div className="border border-white/8 bg-ink-900/60 p-5">
             <h3 className="font-display text-lg text-mist-100">STRC</h3>
             <p className="mt-6 text-sm text-mist-500">
-              Scenario curve lands when the shared valuation job finishes.
+              Not modeled yet — see the note under Assumptions.
             </p>
           </div>
           <div className="border border-white/8 bg-ink-900/60 p-5">
@@ -1440,16 +1442,3 @@ function KnobCard({
   );
 }
 
-function PendingCard({
-  ticker,
-  story,
-}: {
-  ticker: string;
-  story?: PreferredIssuerStory;
-}) {
-  return (
-    <div className="border border-white/8 bg-ink-900/40 px-4 py-3 font-mono text-sm text-mist-500">
-      {ticker}: {story?.status === "ready" ? "ready" : "model pending"}
-    </div>
-  );
-}
