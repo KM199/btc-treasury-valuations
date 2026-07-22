@@ -1,29 +1,29 @@
 {
-  "as_of": "2026-07-22T16:57:15.742281+00:00",
-  "btc_price": 66193.7578125,
+  "as_of": "2026-07-22T18:14:11.751228+00:00",
+  "btc_price": 65960.859375,
   "btc": {
-    "price": 66193.7578125,
+    "price": 65960.859375,
     "mstr_holdings": 843775.0,
-    "mstr_btc_value": 55852637998.24219,
+    "mstr_btc_value": 55656124119.140625,
     "asst_holdings": 19921.0,
-    "asst_btc_value": 1318645849.3828125
+    "asst_btc_value": 1314006279.609375
   },
   "instruments": [
     {
       "ticker": "MSTR",
       "name": "Strategy common",
       "issuer": "Strategy",
-      "market_price": 100.29000091552734,
+      "market_price": 99.79000091552734,
       "kind": "common",
       "price_source": "yahoo",
-      "fair_value_hint": 103.03360770671578,
+      "fair_value_hint": 102.6069434141898,
       "fair_label": "rNAV"
     },
     {
       "ticker": "STRC",
       "name": "Stretch preferred",
       "issuer": "Strategy",
-      "market_price": 87.73999786376953,
+      "market_price": 87.37000274658203,
       "kind": "preferred",
       "price_source": "yahoo",
       "par": 100.0
@@ -32,17 +32,17 @@
       "ticker": "ASST",
       "name": "Strive common",
       "issuer": "ASST",
-      "market_price": 12.710000038146973,
+      "market_price": 12.550000190734863,
       "kind": "common",
       "price_source": "yahoo",
-      "fair_value_hint": 8.681216232484717,
+      "fair_value_hint": 8.676450767903702,
       "fair_label": "rNAV"
     },
     {
       "ticker": "SATA",
       "name": "SATA preferred",
       "issuer": "ASST",
-      "market_price": 98.25,
+      "market_price": 97.70999908447266,
       "kind": "preferred",
       "price_source": "yahoo",
       "par": 100.0
@@ -53,26 +53,26 @@
     "usd_reserve_usd": 3225000000.0,
     "convertible_debt_principal": 6713750000.0,
     "convertible_debt_market_value": 6390023125.0,
-    "strf_market_value": 1249815280.2396545,
-    "senior_claims_market_usd": 7639838405.239655,
-    "senior_claims_face_usd": 7963565280.239655,
+    "strf_market_value": 1252254852.4965515,
+    "senior_claims_market_usd": 7642277977.4965515,
+    "senior_claims_face_usd": 7966004852.4965515,
     "strc_shares": 104894705,
     "source": "https://www.strategy.com/",
     "rnav": {
       "label": "rNAV",
       "description": "rNAV face: prefs at par + debt at face. rNAV market: prefs at market + debt at market. STRE always face*.",
       "btc_holdings": 843775.0,
-      "btc_price": 66193.7578125,
-      "btc_value": 55852637998.24219,
-      "mnav_total": 55852637998.24219,
+      "btc_price": 65960.859375,
+      "btc_value": 55656124119.140625,
+      "mnav_total": 55656124119.140625,
       "cash": 3225000000.0,
-      "preferred_market_cap": 12188908361.48227,
+      "preferred_market_cap": 12155900345.898228,
       "preferred_face_cap": 14577935900.0,
       "preferred_by_series": {
-        "strc": 9203461192.620735,
-        "strd": 858668004.1170578,
-        "strk": 876963884.5048218,
-        "strf": 1249815280.2396545
+        "strc": 9164650663.951912,
+        "strd": 856178681.3503685,
+        "strk": 882816148.0993958,
+        "strf": 1252254852.4965515
       },
       "preferred_face_by_series": {
         "strc": 10489470500.0,
@@ -81,7 +81,7 @@
         "strf": 1283968900.0
       },
       "preferreds_face_total_usd": 15592206300.0,
-      "preferreds_market_total_usd": 13203178761.48227,
+      "preferreds_market_total_usd": 13170170745.898228,
       "stre_face_usd": 1014270399.9999999,
       "stre_shares": 8866000.0,
       "stre_pricing_note": "STRE trades on LuxSE with thin quotes and no reliable Yahoo feed; both rNAV variants carry STRE at \u20ac100 par \u00d7 FX.",
@@ -89,22 +89,22 @@
       "convertible_debt_face": 6713750000.0,
       "convertible_debt_market": 6390023125.0,
       "debt_at_market": true,
-      "mstr_market_cap": 38433033860.84747,
-      "mstr_market_price": 100.29000091552734,
-      "enterprise_value": 54801235747.32974,
-      "mnav_multiple": 0.9811754236040644,
-      "rnav_face_total": 36771681698.24219,
-      "rnav_market_total": 39484436111.75992,
-      "rnav_face_per_share": 95.95474571522338,
-      "rnav_market_per_share": 103.03360770671578,
-      "rnav_total": 39484436111.75992,
-      "rnav_per_share": 103.03360770671578,
-      "fair_value_per_share": 103.03360770671578,
-      "premium_to_rnav_pct": -2.662827064153759,
+      "mstr_market_cap": 38241424360.84747,
+      "mstr_market_price": 99.79000091552734,
+      "enterprise_value": 54576618231.7457,
+      "mnav_multiple": 0.9806040053187305,
+      "rnav_face_total": 36575167819.140625,
+      "rnav_market_total": 39320930248.2424,
+      "rnav_face_per_share": 95.44194786568679,
+      "rnav_market_per_share": 102.6069434141898,
+      "rnav_total": 39320930248.2424,
+      "rnav_per_share": 102.6069434141898,
+      "fair_value_per_share": 102.6069434141898,
+      "premium_to_rnav_pct": -2.7453721989275177,
       "mstr_shares": 383219000.0
     },
     "wipeouts": {
-      "btc_spot": 66193.7578125,
+      "btc_spot": 65960.859375,
       "btc_holdings": 843775.0,
       "cash": 3225000000.0,
       "total_claims_usd": 22305956300.0,
@@ -117,7 +117,7 @@
           "btc_full": 4134.692305413173,
           "btc_zero": null,
           "buffer_to_zero_pct": null,
-          "buffer_to_full_pct": -93.75365224448342
+          "buffer_to_full_pct": -93.73159727664148
         },
         {
           "name": "STRF",
@@ -126,8 +126,8 @@
           "senior_claims_usd": 6713750000.0,
           "btc_full": 5656.388136647803,
           "btc_zero": 4134.692305413173,
-          "buffer_to_zero_pct": -93.75365224448342,
-          "buffer_to_full_pct": -91.45480129309163
+          "buffer_to_zero_pct": -93.73159727664148,
+          "buffer_to_full_pct": -91.42462940864647
         },
         {
           "name": "STRC",
@@ -136,8 +136,8 @@
           "senior_claims_usd": 7997718900.0,
           "btc_full": 18087.98483007911,
           "btc_zero": 5656.388136647803,
-          "buffer_to_zero_pct": -91.45480129309163,
-          "buffer_to_full_pct": -72.67418344594515
+          "buffer_to_zero_pct": -91.42462940864647,
+          "buffer_to_full_pct": -72.57769986402772
         },
         {
           "name": "STRE",
@@ -146,8 +146,8 @@
           "senior_claims_usd": 18487189400.0,
           "btc_full": 19290.04746526029,
           "btc_zero": 18087.98483007911,
-          "buffer_to_zero_pct": -72.67418344594515,
-          "buffer_to_full_pct": -70.8582076275211
+          "buffer_to_zero_pct": -72.57769986402772,
+          "buffer_to_full_pct": -70.75531209259614
         },
         {
           "name": "STRK",
@@ -156,8 +156,8 @@
           "senior_claims_usd": 19501459800.0,
           "btc_full": 20951.716038043316,
           "btc_zero": 19290.04746526029,
-          "buffer_to_zero_pct": -70.8582076275211,
-          "buffer_to_full_pct": -68.34789755041403
+          "buffer_to_zero_pct": -70.75531209259614,
+          "buffer_to_full_pct": -68.23613846670972
         },
         {
           "name": "STRD",
@@ -166,8 +166,8 @@
           "senior_claims_usd": 20903534200.0,
           "btc_full": 22613.796687505557,
           "btc_zero": 20951.716038043316,
-          "buffer_to_zero_pct": -68.34789755041403,
-          "buffer_to_full_pct": -65.83696494228165
+          "buffer_to_zero_pct": -68.23613846670972,
+          "buffer_to_full_pct": -65.71634011172924
         },
         {
           "name": "MSTR common",
@@ -176,7 +176,7 @@
           "senior_claims_usd": 22305956300.0,
           "btc_full": null,
           "btc_zero": 22613.796687505557,
-          "buffer_to_zero_pct": -65.83696494228165,
+          "buffer_to_zero_pct": -65.71634011172924,
           "buffer_to_full_pct": null
         }
       ],
@@ -192,22 +192,22 @@
       }
     },
     "strc_hedge": {
-      "strc_price": 87.73999786376953,
+      "strc_price": 87.37000274658203,
       "monthly_dividend_per_share": 1.0,
       "cash_covered_dividend_per_share": 22.39322193117026,
       "usd_months_dividend_coverage": 22.39322193117026,
-      "hedge_amount_per_share": 65.34677593259927,
-      "btc_spot": 66193.7578125,
+      "hedge_amount_per_share": 64.97678081541177,
+      "btc_spot": 65960.859375,
       "btc_par": 18087.98483007911,
       "btc_zero": 5656.388136647803,
-      "buffer_to_par_pct": -72.67418344594515,
-      "buffer_to_zero_pct": -91.45480129309163,
+      "buffer_to_par_pct": -72.57769986402772,
+      "buffer_to_zero_pct": -91.42462940864647,
       "seniors": "Converts + STRF",
-      "mstr_price": 100.29000091552734,
-      "mstr_reference_strike": 74.69373578379502,
-      "ibit_price": 37.48500061035156,
-      "ibit_at_par": 10.220160604315662,
-      "ibit_at_zero": 3.1802458896850037,
+      "mstr_price": 99.79000091552734,
+      "mstr_reference_strike": 74.21349219668669,
+      "ibit_price": 37.36000061035156,
+      "ibit_at_par": 10.223682972374425,
+      "ibit_at_zero": 3.1824699794723297,
       "ibit_spreads": [
         {
           "long": 12.0,
@@ -230,35 +230,35 @@
     "sata_shares": 7829500,
     "sata_dividend_rate": 13.0,
     "debt": 0.0,
-    "mcap": 1052853276.2,
+    "mcap": 1056182456.52,
     "source": "https://data.strategytracker.com/",
     "rnav": {
       "btc_holdings": 19921.0,
-      "btc_price": 66193.7578125,
-      "btc_value": 1318645849.3828125,
+      "btc_price": 65960.859375,
+      "btc_value": 1314006279.609375,
       "cash": 200471000.0,
       "debt": 0.0,
       "sata_shares": 7829500.0,
       "sata_face": 782950000.0,
-      "sata_market": 769248375.0,
-      "sata_price": 98.25,
+      "sata_market": 765020437.8318787,
+      "sata_price": 97.70999908447266,
       "asst_shares": 86378274.0,
-      "asst_price": 12.710000038146973,
-      "asst_market_cap": 1097867865.8350697,
-      "rnav_face_total": 736166849.3828125,
-      "rnav_market_total": 749868474.3828125,
-      "rnav_face_per_share": 8.522592722596107,
-      "rnav_market_per_share": 8.681216232484717,
-      "mnav_face": 1.274297315402426,
-      "mnav_market": 1.2639066369602854,
-      "premium_face_pct": 49.13302150939016,
-      "premium_market_pct": 46.40805732481043,
-      "rnav_total": 749868474.3828125,
-      "rnav_per_share": 8.681216232484717,
-      "fair_value_per_share": 8.681216232484717
+      "asst_price": 12.550000190734863,
+      "asst_market_cap": 1084047355.1753483,
+      "rnav_face_total": 731527279.609375,
+      "rnav_market_total": 749456841.7774963,
+      "rnav_face_per_share": 8.468880491978515,
+      "rnav_market_per_share": 8.676450767903702,
+      "mnav_face": 1.2682788362859039,
+      "mnav_market": 1.254633877014133,
+      "premium_face_pct": 48.18960076980505,
+      "premium_market_pct": 44.644400417280764,
+      "rnav_total": 749456841.7774963,
+      "rnav_per_share": 8.676450767903702,
+      "fair_value_per_share": 8.676450767903702
     },
     "wipeouts": {
-      "btc_spot": 66193.7578125,
+      "btc_spot": 65960.859375,
       "btc_holdings": 19921.0,
       "cash": 200471000.0,
       "total_claims_usd": 782950000.0,
@@ -281,7 +281,7 @@
           "btc_full": 29239.445810953264,
           "btc_zero": null,
           "buffer_to_zero_pct": null,
-          "buffer_to_full_pct": -55.82748770091476
+          "buffer_to_full_pct": -55.67152082612892
         },
         {
           "name": "ASST common",
@@ -290,7 +290,7 @@
           "senior_claims_usd": 782950000.0,
           "btc_full": null,
           "btc_zero": 29239.445810953264,
-          "buffer_to_zero_pct": -55.82748770091476,
+          "buffer_to_zero_pct": -55.67152082612892,
           "buffer_to_full_pct": null
         }
       ],
@@ -301,11 +301,11 @@
       }
     },
     "sata_hedge": {
-      "sata_price": 98.25,
+      "sata_price": 97.70999908447266,
       "claim_usd": 782950000.0,
       "btc_full": 29239.445810953264,
       "btc_zero": null,
-      "buffer_to_full_pct": -55.82748770091476,
+      "buffer_to_full_pct": -55.67152082612892,
       "buffer_to_zero_pct": null
     }
   },
