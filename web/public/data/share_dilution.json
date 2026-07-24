@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-07-24T20:23:10.914772+00:00",
+  "as_of": "2026-07-24T21:38:37.038566+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -44,7 +44,7 @@
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20260724T201844Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20260724T213351Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
