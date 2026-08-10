@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-08-10T09:49:35.908900+00:00",
+  "as_of": "2026-08-10T11:12:06.447283+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -8,18 +8,12 @@
   },
   "asst": {
     "ticker": "ASST",
-    "basic_shares": 84209973,
-    "effective_diluted_shares": 86804205,
-    "gross_diluted_shares": 113400215,
-    "rnav_denominator_shares": 86804205,
-    "overhang_effective": 2594232,
+    "basic_shares": 85439973,
+    "effective_diluted_shares": 88705776,
+    "gross_diluted_shares": 115301786,
+    "rnav_denominator_shares": 88705776,
+    "overhang_effective": 3265803,
     "breakdown": [
-      {
-        "name": "RSU (Unvested)",
-        "share_count": 1597269,
-        "include_in_effective_dilution": true,
-        "notes": ""
-      },
       {
         "name": "Options (Legacy SMLR)",
         "share_count": 996963,
@@ -32,6 +26,12 @@
         "include_in_effective_dilution": false,
         "notes": "Represents shares exercisable underlying Traditional Warrants. Exercises of traditional warrants subject to the payment of exercise price to Company.",
         "expiry": "2026-09-15"
+      },
+      {
+        "name": "RSU (Unvested)",
+        "share_count": 2268840,
+        "include_in_effective_dilution": true,
+        "notes": ""
       }
     ],
     "excluded_from_effective": [
@@ -44,7 +44,7 @@
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20260810T091849Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20260810T110343Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
