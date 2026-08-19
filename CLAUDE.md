@@ -64,14 +64,19 @@ Human docs: [`docs/`](docs/). Site app: [`web/`](web/). CI: `.github/workflows/`
 ## Tests
 
 ```bash
-# Run all tests (requires output/ibit_data.json — run fetch_data.py first)
-python -m pytest test_ibit_option_deltas_convexity.py -v
+# Run all tests
+python -m pytest -v
+
+# Model tests only — no fetched data required
+python -m pytest test_dividend_waterfall.py -v
 
 # Run a single test
 python -m pytest test_ibit_option_deltas_convexity.py::TestIbitOptionDeltasConvexity::test_gamma_magnitude_atm_strike -v
 ```
 
-`test_ibit_option_deltas_convexity.py` tests the CRR binomial tree implementation in `ibit_option_deltas.py`: Greek magnitudes (Δ, Γ, ρ), convexity of parallel spot+rate shocks, and long-put P&L direction. Tests skip automatically if `output/ibit_data.json` is absent.
+`test_dividend_waterfall.py` tests the monthly dividend waterfall in `sata_valuation.py`: payment order (cash always, Bitcoin only above the gate), the suspension gate against `coverage_claim_value`, the certificate's compounded-dividend arrears mechanics (coupon +25bps, +25bps/month outstanding, 20% cap, compounded monthly on the whole balance), catch-up and clock reset, and the SATA-at-market-net-of-STRC claim. Builds its own configs — runs anywhere.
+
+`test_ibit_option_deltas_convexity.py` tests the CRR binomial tree implementation in `ibit_option_deltas.py`: Greek magnitudes (Δ, Γ, ρ), convexity of parallel spot+rate shocks, and long-put P&L direction. Tests skip automatically if `output/ibit_data.json` is absent — but they **error** rather than skip if the file exists without delta enrichment (a raw chain has no `risk_free_rate`). Run `python ibit_option_deltas.py` to enrich it.
 
 ## Architecture
 
@@ -130,12 +135,14 @@ All raster charts belong under **`output/plots/`**. Defaults from `btc_price_pat
 ### Dividend Suspension Logic
 
 Each monthly simulation step:
-1. Pay accumulated unpaid dividends from **cash first** (always); remaining balance from BTC only if BTC mark-to-market ≥ threshold (typically 1× par)
+1. Pay accumulated unpaid dividends from **cash first** (always); remaining balance from BTC only if BTC mark-to-market ≥ threshold (typically 1× the net claim)
 2. Pay the current monthly dividend from **cash first** (always); sell BTC for any shortfall only if BTC mark-to-market ≥ threshold
-3. If the full monthly dividend is not paid: compound the unpaid amount (12.5%–20% annual, +25bps/month, capped at 20%)
+3. If the full monthly dividend is not paid: the dividend is suspended and the unpaid amount compounds monthly at the coupon +25bps, stepping up another 25bps for each further unpaid month, capped at 20% annual (per the certificate of designation — `compounded_dividend_start_rate=None` tracks the live coupon)
 4. Track cumulative NPV using pre-computed monthly discount factors
 
-Cash is never blocked by the suspension threshold — only BTC sales are. The threshold multiplier (sensitivity-tested from 0× to 2× par) gates Bitcoin liquidations only.
+Cash is never blocked by the suspension threshold — only BTC sales are. The cash reserve runs to zero before any Bitcoin is sold.
+
+The gate base is `Configuration.coverage_claim_value` = SATA marked at its live market price, less Strive's STRC holding marked at STRC's live price (`STRC_SHARES_HELD` in `preferred_valuation.py`, a 10-Q figure refreshed quarterly). Par is not used: SATA trades below its $100 stated amount, and the STRC position nets the claim down dollar for dollar without ever counting as cash. Dividends are still computed on gross par. The threshold multiplier (sensitivity-tested from 0× to 2×) gates Bitcoin liquidations only.
 
 ## Key Files
 
