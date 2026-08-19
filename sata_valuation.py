@@ -131,9 +131,13 @@ class Configuration:
                  # explicitly to pin a specific rate (e.g. sensitivity testing).
                  discount_rate_annual: Optional[float] = None,
 
-                 # Dividend Parameters
+                 # Dividend Parameters. Per the SATA certificate of designation,
+                 # the compounded dividend rate on an unpaid regular dividend
+                 # starts at the regular dividend rate + 25bps and steps up
+                 # 25bps a month, capped at 20% p.a. None tracks the live
+                 # coupon (the loop adds the first 25bps itself).
                  dividend_suspension_threshold_multiplier: float = 1,
-                 compounded_dividend_start_rate: float = 0.1250,
+                 compounded_dividend_start_rate: Optional[float] = None,
                  compounded_dividend_increment: float = 0.0025,
                  compounded_dividend_max_rate: float = 0.20,
 
@@ -175,7 +179,11 @@ class Configuration:
 
         # Dividend Parameters
         self.dividend_suspension_threshold_multiplier = dividend_suspension_threshold_multiplier
-        self.compounded_dividend_start_rate = compounded_dividend_start_rate
+        self.compounded_dividend_start_rate = (
+            self.sata_annual_dividend_rate
+            if compounded_dividend_start_rate is None
+            else compounded_dividend_start_rate
+        )
         self.compounded_dividend_increment = compounded_dividend_increment
         self.compounded_dividend_max_rate = compounded_dividend_max_rate
 
@@ -790,15 +798,31 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
                 cash_flows[month] += shortfall
                 month_dividend_paid += shortfall
 
+        # Arrears carried into this month compound monthly at the rate for the
+        # number of periods they have been outstanding — the certificate's
+        # "compounded dividends", which accrue from the day after the missed
+        # payment date until the balance is paid in full. months_unpaid is the
+        # count of periods already elapsed, so the rate here is coupon + 25bps
+        # for the first month outstanding and steps up from there.
+        if accumulated_unpaid_dividends > 0 and months_unpaid > 0:
+            compounded_rate = min(compounded_start_rate + (months_unpaid * compounded_increment), compounded_max_rate)
+            accumulated_unpaid_dividends *= (1 + compounded_rate/12)
+
         if month_dividend_paid >= monthly_dividend_total:
             months_paid += 1
             consecutive_insolvent_months = 0
         else:
-            months_unpaid += 1
-            compounded_rate = min(compounded_start_rate + (months_unpaid * compounded_increment), compounded_max_rate)
-            shortfall = monthly_dividend_total - month_dividend_paid
-            accumulated_unpaid_dividends += shortfall * (1 + compounded_rate/12)
+            # This month's shortfall joins the balance at face; it starts
+            # accruing next month, not the month it was missed.
+            accumulated_unpaid_dividends += monthly_dividend_total - month_dividend_paid
             consecutive_insolvent_months += 1
+
+        # Step the arrears clock while anything is outstanding; clear it once
+        # the balance is gone (a full catch-up resets the rate to the floor).
+        if accumulated_unpaid_dividends > 0:
+            months_unpaid += 1
+        else:
+            months_unpaid = 0
 
     return months_paid, bitcoin_holdings, cash_reserve, accumulated_unpaid_dividends, cash_flows
 
