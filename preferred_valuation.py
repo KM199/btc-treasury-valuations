@@ -20,6 +20,17 @@ from strc_paths import OUTPUT_DIR, YIELD_CURVE_FALLBACK_PATH
 # environment before any fetch has ever succeeded.
 DEFAULT_DISCOUNT_RATE_ANNUAL = 0.04159
 
+# Strive's holding of Strategy's STRC preferred, from the 10-Q for the quarter
+# ended 2026-06-30 (filed 2026-08-10): 505,000 shares, $50.5M notional, carried
+# at $42.9M fair value. The share count only moves on a filing, so it is pinned
+# here and refreshed each quarter; the position is marked with the live quote.
+STRC_SHARES_HELD = 505_000.0
+STRC_SHARES_HELD_AS_OF = "2026-06-30"
+STRC_SHARES_HELD_SOURCE = (
+    "https://www.sec.gov/Archives/edgar/data/1920406/000162828026054985/"
+    "asst-20260630.htm"
+)
+
 # Longest pillar FRED's constant-maturity Treasury series publishes (DGS30).
 # The coupon stream being discounted is defaultable and heavily front-loaded
 # in PV terms (not a true 100-year cash flow), so the longest live market
@@ -111,6 +122,12 @@ class PreferredIssuerConfig:
     market_price: float | None = None
     dividend_suspension_threshold_multiplier: float = 1.0
     discount_rate_annual: float = DEFAULT_DISCOUNT_RATE_ANNUAL
+    # Preferred stock of another Bitcoin treasury company held on this issuer's
+    # own balance sheet. Nets against the issuer's preferred claim when the
+    # model decides whether Bitcoin may be sold. Strive holds STRC; Strategy
+    # holds none, so this stays zero for STRC.
+    held_preferred_shares: float = 0.0
+    held_preferred_price: float | None = None
 
     def to_configuration_overrides(self) -> dict[str, Any]:
         """Map onto ``sata_valuation.Configuration`` override keys."""
@@ -120,13 +137,78 @@ class PreferredIssuerConfig:
             "bitcoin_holdings": self.bitcoin_holdings,
             "cash": self.cash_reserve,
             "discount_rate_annual": self.discount_rate_annual,
+            "strc_shares_held": self.held_preferred_shares,
+            "strc_market_price": self.held_preferred_price,
         }
         if self.market_price is not None:
             overrides["sata_current_price"] = self.market_price
         return overrides
 
+    @property
+    def held_preferred_value(self) -> float:
+        """Mark-to-market of the held preferred position (0 without a quote)."""
+        if not self.held_preferred_shares or not self.held_preferred_price:
+            return 0.0
+        return float(self.held_preferred_shares) * float(self.held_preferred_price)
+
+    @property
+    def net_claim_value(self) -> float:
+        """Preferred claim at market, net of preferred held on the balance sheet."""
+        price = self.market_price if self.market_price else self.par_value
+        return max(self.shares_outstanding * float(price) - self.held_preferred_value, 0.0)
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+def cash_net_of_held_preferred(reported_cash: float, held_preferred_value: float) -> float:
+    """Strip the held-preferred position out of a reported cash figure.
+
+    strategytracker's ``cash`` for ASST lumps the STRC position in with cash and
+    equivalents: at 2026-08-07 it reported $202.664M against the 10-Q's $154.9M
+    cash + $48.0M STRC fair value (a 0.1% gap). Left alone, the model would
+    spend STRC as if it were a bank balance and then net it against the claim
+    as well — counting it twice. Cash means cash here; the STRC position earns
+    its keep by reducing the claim Bitcoin has to cover, not by paying coupons.
+    """
+    if held_preferred_value <= 0:
+        return reported_cash
+    return max(reported_cash - held_preferred_value, 0.0)
+
+
+def live_strc_price(output_dir: Path = OUTPUT_DIR) -> float | None:
+    """Latest STRC quote: live Yahoo first, then whatever the fetches left behind.
+
+    The position is only worth what it can be sold for today, and the cached
+    JSON can be weeks stale (strc_data.json is written by option-chain fetches,
+    not on a quote schedule). yahoo_spot_price goes through the 1-hour network
+    cache, so this is one call per hour at worst and a no-op offline.
+    """
+    try:
+        from fetch_yahoo import yahoo_spot_price
+
+        price = yahoo_spot_price("STRC")
+        if price:
+            return float(price)
+    except Exception:
+        pass
+
+    for name, key in (
+        ("strc_data.json", "current_price"),
+        ("mstr_treasury_extracted_data.json", "strc_price"),
+        ("mstr_enriched_data.json", "strc_price"),
+    ):
+        path = output_dir / name
+        if not path.is_file():
+            continue
+        try:
+            with path.open() as f:
+                price = json.load(f).get(key)
+        except Exception:
+            continue
+        if price:
+            return float(price)
+    return None
 
 
 def load_sata_issuer(output_dir: Path = OUTPUT_DIR) -> PreferredIssuerConfig:
@@ -140,14 +222,23 @@ def load_sata_issuer(output_dir: Path = OUTPUT_DIR) -> PreferredIssuerConfig:
     if rate > 1:
         rate = rate / 100.0
 
+    strc_shares = data.get("strc_shares_held")
+    strc_price = data.get("strc_price") or live_strc_price(output_dir)
+    held_shares = float(strc_shares) if strc_shares is not None else STRC_SHARES_HELD
+    held_value = held_shares * float(strc_price) if strc_price else 0.0
+
     return PreferredIssuerConfig(
         ticker="SATA",
         shares_outstanding=int(data.get("sata_shares") or 7_513_910),
         annual_dividend_rate=rate,
         bitcoin_holdings=float(data.get("btc_holdings") or 19_032.3),
-        cash_reserve=float(data.get("cash") or 186_400_000.0),
+        cash_reserve=cash_net_of_held_preferred(
+            float(data.get("cash") or 186_400_000.0), held_value
+        ),
         market_price=float(data["sata_price"]) if data.get("sata_price") is not None else None,
         discount_rate_annual=_live_discount_rate_annual(output_dir),
+        held_preferred_shares=held_shares,
+        held_preferred_price=float(strc_price) if strc_price else None,
     )
 
 

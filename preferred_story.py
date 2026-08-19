@@ -117,7 +117,16 @@ def _config_snapshot(cfg: dict[str, Any]) -> dict[str, Any]:
         "discount_rate_annual",
         "monthly_discount_rate",
         "compounded_dividend_start_rate",
+        "compounded_dividend_increment",
         "compounded_dividend_max_rate",
+        # Netting of preferred held on the issuer's own balance sheet — the
+        # base the Bitcoin-sale gate is measured against.
+        "sata_market_price",
+        "sata_market_claim",
+        "strc_shares_held",
+        "strc_market_price",
+        "strc_position_value",
+        "coverage_claim_value",
     )
     out = {k: cfg.get(k) for k in keys if k in cfg}
     # STRC configs (strc_valuation.py) use plain, unprefixed key names instead of

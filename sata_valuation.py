@@ -47,6 +47,8 @@ warnings.filterwarnings('ignore')
 # Set random seed for reproducibility
 np.random.seed(42)
 
+from preferred_valuation import STRC_SHARES_HELD
+
 # ============================================================================
 # TREASURY DATA LOADING
 # ============================================================================
@@ -72,6 +74,12 @@ def _parse_treasury_extracted_data(treasury_data: Dict[str, Any]) -> Dict[str, A
 
     if 'sata_price' in treasury_data:
         data['sata_current_price'] = treasury_data['sata_price']
+
+    if treasury_data.get('strc_shares_held') is not None:
+        data['strc_shares_held'] = treasury_data['strc_shares_held']
+
+    if treasury_data.get('strc_price') is not None:
+        data['strc_market_price'] = treasury_data['strc_price']
 
     return data
 
@@ -121,10 +129,21 @@ class Configuration:
                  sata_shares_outstanding: int = 7513910,
                  sata_annual_dividend_rate: float = 0.13,
                  sata_par_value: float = 100.0,
+                 # Live SATA quote. The Bitcoin-sale gate is measured against
+                 # what the preferred actually trades for, not the $100 stated
+                 # amount — SATA has traded persistently below par. None falls
+                 # back to par.
+                 sata_market_price: Optional[float] = None,
 
                  # Treasury Parameters (fallbacks when treasury_extracted_data.json is unavailable)
                  initial_bitcoin_holdings: float = 19032.3,
                  initial_cash_reserve: float = 186_400_000.0,
+
+                 # Strive holds Strategy's STRC preferred as a treasury asset.
+                 # Share count is a quarterly balance-sheet fact (10-Q); the
+                 # price is live, so the position is marked every run.
+                 strc_shares_held: float = STRC_SHARES_HELD,
+                 strc_market_price: Optional[float] = None,
 
                  # Financial Parameters. None = resolve from the live Treasury
                  # zero curve (see _resolve_discount_rate_annual); pass a float
@@ -162,10 +181,13 @@ class Configuration:
         self.sata_shares_outstanding = overrides.get('sata_shares', sata_shares_outstanding)
         self.sata_annual_dividend_rate = overrides.get('sata_dividend_rate', sata_annual_dividend_rate)
         self.sata_par_value = sata_par_value
+        self.sata_market_price = overrides.get('sata_current_price', sata_market_price)
 
         # Treasury Parameters
         self.initial_bitcoin_holdings = overrides.get('bitcoin_holdings', initial_bitcoin_holdings)
         self.initial_cash_reserve = overrides.get('cash', initial_cash_reserve)
+        self.strc_shares_held = overrides.get('strc_shares_held', strc_shares_held)
+        self.strc_market_price = overrides.get('strc_market_price', strc_market_price)
 
         # Financial Parameters. Precedence: explicit overrides dict entry >
         # explicit constructor kwarg > live Treasury curve > hardcoded fallback
@@ -222,6 +244,34 @@ class Configuration:
         return self.sata_shares_outstanding * self.sata_par_value
 
     @property
+    def sata_market_claim(self) -> float:
+        """Market value of the SATA claim (shares × live price, par if no quote).
+
+        Dividends are contractual on the $100 stated amount, but what it would
+        actually cost to stand behind the preferred is what it trades for.
+        """
+        price = self.sata_market_price if self.sata_market_price else self.sata_par_value
+        return self.sata_shares_outstanding * float(price)
+
+    @property
+    def strc_position_value(self) -> float:
+        """Mark-to-market of Strive's STRC holding (0 without a live quote)."""
+        if not self.strc_shares_held or not self.strc_market_price:
+            return 0.0
+        return float(self.strc_shares_held) * float(self.strc_market_price)
+
+    @property
+    def coverage_claim_value(self) -> float:
+        """The claim Bitcoin has to cover before it can be sold for coupons.
+
+        SATA marked to market, less the STRC position marked to market. STRC is
+        an asset Strive can liquidate against the same obligation, so it nets
+        the claim down dollar for dollar — but it is never treated as cash,
+        because it is BTC-correlated paper, not a deposit.
+        """
+        return max(self.sata_market_claim - self.strc_position_value, 0.0)
+
+    @property
     def monthly_discount_rate(self) -> float:
         """Calculate monthly discount rate."""
         return (1 + self.discount_rate_annual) ** (1/12) - 1
@@ -259,6 +309,12 @@ class Configuration:
             'initial_bitcoin_holdings': self.initial_bitcoin_holdings,
             'initial_cash_reserve': self.initial_cash_reserve,
             'total_par_value': self.total_par_value,
+            'sata_market_price': self.sata_market_price,
+            'sata_market_claim': self.sata_market_claim,
+            'strc_shares_held': self.strc_shares_held,
+            'strc_market_price': self.strc_market_price,
+            'strc_position_value': self.strc_position_value,
+            'coverage_claim_value': self.coverage_claim_value,
             'dividend_suspension_threshold_multiplier': self.dividend_suspension_threshold_multiplier,
             'compounded_dividend_start_rate': self.compounded_dividend_start_rate,
             'compounded_dividend_increment': self.compounded_dividend_increment,
@@ -291,7 +347,8 @@ class Configuration:
   SATA: {self.sata_shares_outstanding:,} shares @ ${self.sata_par_value:.0f} par ({self.sata_annual_dividend_rate:.2%} yield)
   Treasury: {self.initial_bitcoin_holdings:,.2f} BTC + ${self.initial_cash_reserve:,.0f} cash
   Finance: {self.discount_rate_annual:.2%} annual discount rate
-  Suspension: {self.dividend_suspension_threshold_multiplier:.2f}x par value threshold"""
+  Claim: ${self.sata_market_claim:,.0f} SATA at market − ${self.strc_position_value:,.0f} STRC held = ${self.coverage_claim_value:,.0f}
+  Suspension: {self.dividend_suspension_threshold_multiplier:.2f}x net claim threshold"""
 
 # ============================================================================
 # LOGGING CONFIGURATION
@@ -406,6 +463,31 @@ def load_btcc_data(data_dir: Optional[str] = None) -> Dict[str, Any]:
             print(f"  SATA Dividend Rate: {data['sata_dividend_rate']:.2%}")
         if 'sata_current_price' in data:
             print(f"  SATA Current Price: ${data['sata_current_price']:.2f}")
+
+        # STRC held on Strive's balance sheet: share count is a quarterly 10-Q
+        # figure, the mark comes from whatever STRC quote the fetch left behind.
+        data.setdefault('strc_shares_held', STRC_SHARES_HELD)
+        if data.get('strc_market_price') is None:
+            from preferred_valuation import live_strc_price
+
+            strc_price = live_strc_price(root)
+            if strc_price:
+                data['strc_market_price'] = strc_price
+        if data.get('strc_market_price'):
+            from preferred_valuation import cash_net_of_held_preferred
+
+            held_value = data['strc_shares_held'] * data['strc_market_price']
+            print(
+                f"  STRC held: {data['strc_shares_held']:,.0f} sh @ "
+                f"${data['strc_market_price']:.2f} = ${held_value:,.0f}"
+            )
+            if 'cash' in data:
+                reported_cash = data['cash']
+                data['cash'] = cash_net_of_held_preferred(reported_cash, held_value)
+                print(
+                    f"  Cash net of STRC: ${data['cash']:,.0f} "
+                    f"(reported ${reported_cash:,.0f})"
+                )
 
         return data
     except Exception as e:
@@ -698,7 +780,8 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
 
     Dividends are funded from cash whenever available (cash is never gated by the threshold).
     Bitcoin may only be sold for dividends when BTC mark-to-market is at or above threshold_value
-    (= total_par_value × threshold_multiplier, typically 1× par).
+    (= coverage_claim_value × threshold_multiplier, typically 1×; the claim is
+    SATA marked to market net of Strive's STRC position).
 
     Returns:
     - months_paid: Number of months dividends were paid
@@ -710,7 +793,9 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
     # Extract config values
     TOTAL_MONTHS = config['total_months']
     SATA_MONTHLY_DIVIDEND_TOTAL = config['sata_monthly_dividend_total']
-    TOTAL_PAR_VALUE = config['total_par_value']
+    # Gate base: SATA marked to market net of the STRC position, falling back to
+    # par for callers that predate the netting.
+    COVERAGE_CLAIM_VALUE = config.get('coverage_claim_value') or config['total_par_value']
     DIVIDEND_SUSPENSION_THRESHOLD_MULTIPLIER = config['dividend_suspension_threshold_multiplier']
     COMPOUNDED_DIVIDEND_START_RATE = config['compounded_dividend_start_rate']
     COMPOUNDED_DIVIDEND_INCREMENT = config['compounded_dividend_increment']
@@ -721,7 +806,7 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
     threshold_mult = threshold_multiplier if threshold_multiplier is not None else DIVIDEND_SUSPENSION_THRESHOLD_MULTIPLIER
 
     # Pre-calculate threshold value (constant throughout simulation)
-    threshold_value = TOTAL_PAR_VALUE * threshold_mult
+    threshold_value = COVERAGE_CLAIM_VALUE * threshold_mult
 
     # Cache frequently used values to avoid repeated dictionary lookups
     monthly_dividend_total = SATA_MONTHLY_DIVIDEND_TOTAL
@@ -914,7 +999,7 @@ def simulate_unified_worker(args: Tuple[str, Any, np.ndarray, Dict[str, Any]]) -
         total_months = config['total_months']
         return create_sensitivity_threshold_result(
             threshold_multiplier=worker_param,
-            threshold_value=config['total_par_value'] * worker_param,
+            threshold_value=(config.get('coverage_claim_value') or config['total_par_value']) * worker_param,
             mean_npv_per_share=npvs_per_share.mean(),
             median_npv_per_share=np.median(npvs_per_share),
             mean_months_paid=months_paid.mean(),
@@ -1360,7 +1445,7 @@ def run_unified_sensitivity_analysis(analysis_type: str, baseline_price_paths: n
             'range_info': lambda c: f"  Range: {c.sensitivity_threshold_start:.2f}x to {c.sensitivity_threshold_end:.2f}x (step: {c.sensitivity_threshold_step:.2f})",
             'create_baseline': lambda c, stats: create_sensitivity_threshold_result(
                 threshold_multiplier=c.dividend_suspension_threshold_multiplier,
-                threshold_value=c.dividend_suspension_threshold_multiplier * c.total_par_value,
+                threshold_value=c.dividend_suspension_threshold_multiplier * c.coverage_claim_value,
                 mean_npv_per_share=stats['npv_mean'],
                 median_npv_per_share=stats['npv_median'],
                 mean_months_paid=stats['months_mean'],
