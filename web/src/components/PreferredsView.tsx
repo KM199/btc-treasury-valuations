@@ -16,10 +16,8 @@ import {
   CumulativePvChart,
   DensityHistogramChart,
   FairVsBtcChart,
-  HedgeComparisonChart,
   HedgePnlChart,
   SensitivityLineChart,
-  StrcWipeoutBand,
 } from "@/components/PreferredCharts";
 import { fairFor } from "@/lib/rnav";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -175,11 +173,9 @@ export function PreferredsView({
     fairFor(initialFair, "SATA")?.fair_value ??
     null;
 
-  // STRC's model fair value is intentionally not shown: the engine assumes
-  // STRC has sole claim on MSTR's entire consolidated BTC/cash treasury, with
-  // no allowance for convertible debt, STRF, or the other preferred series
-  // that also sit ahead of or alongside it. Until the model accounts for
-  // MSTR's actual capital-structure seniority, its STRC output is misleading.
+  // SATA only for now. STRC is deliberately absent: the engine would have to
+  // model MSTR's convertible debt and the other preferred series competing for
+  // the same treasury before its STRC output means anything.
   const premiumRows = [{ ticker: "SATA", market: sataPx, fair: sataFair }];
 
   const cfg = ready?.configuration || {};
@@ -251,26 +247,8 @@ export function PreferredsView({
     );
   }, [be, discountActive, liveMonthsToPar, liveMonthsToMkt]);
 
-  const hedgeStrc = story.hedge?.STRC || initialMarket.mstr?.strc_hedge;
   const hedgeSata = story.hedge?.SATA || initialMarket.asst?.sata_hedge;
-  const threeLeg = story.hedge?.strc_three_leg;
   const sataIbit = story.hedge?.sata_ibit;
-  // MSTR puts are a poor STRC hedge (basis + IV) — keep in export data,
-  // but do not showcase them on the page.
-  const isMstrLeg = (leg: string | null | undefined) =>
-    String(leg ?? "").toUpperCase().includes("MSTR");
-  const strcHedgeLegs = (threeLeg?.legs ?? []).filter(
-    (leg) => !isMstrLeg(leg.leg as string)
-  );
-  const strcHedgeComparison = (threeLeg?.comparison ?? []).filter(
-    (row) => !isMstrLeg(row.leg as string)
-  );
-  const hedgeWinner =
-    strcHedgeComparison.length > 0
-      ? [...strcHedgeComparison].sort(
-          (a, b) => (b.total_yield_10k ?? -Infinity) - (a.total_yield_10k ?? -Infinity)
-        )[0]
-      : null;
   const sataBook = sataIbit?.book ?? sataIbit?.near_optimal ?? null;
   const sataAssumptions = sataIbit?.assumptions;
   const sataCoc = Number(sataAssumptions?.cost_of_capital ?? 0.0464);
@@ -349,10 +327,7 @@ export function PreferredsView({
       <section className="mt-16">
         <h2 className="font-display text-3xl text-mist-100">Assumptions</h2>
         <p className="mt-2 text-mist-400">
-          Locked inputs for the SATA Monte Carlo. STRC isn&apos;t modeled here
-          yet — MSTR&apos;s capital structure has senior debt and multiple
-          preferred series competing for the same treasury, which this engine
-          doesn&apos;t yet account for.
+          Locked inputs for the SATA Monte Carlo.
         </p>
         {ready ? (
           <>
@@ -384,7 +359,19 @@ export function PreferredsView({
               />
               <Fact
                 label="Suspension threshold"
-                value={`${Number(cfg.dividend_suspension_threshold_multiplier).toFixed(2)}× par`}
+                value={`${Number(cfg.dividend_suspension_threshold_multiplier).toFixed(2)}× net claim`}
+              />
+              <Fact
+                label="SATA claim (at market)"
+                value={formatCompact(Number(cfg.sata_market_claim))}
+              />
+              <Fact
+                label="STRC held (netted out)"
+                value={formatCompact(Number(cfg.strc_position_value))}
+              />
+              <Fact
+                label="Net claim"
+                value={formatCompact(Number(cfg.coverage_claim_value))}
               />
               <Fact
                 label="BTC spot (run)"
@@ -402,13 +389,34 @@ export function PreferredsView({
                 for every month.
               </p>
               <p>
-                <span className="text-mist-200">Payment logic:</span> each month,
-                pay arrears then the current coupon — cash first, always. Sell
-                Bitcoin for any shortfall only when BTC mark-to-market ≥
-                threshold × total par (1.00× = sell only while holdings cover
-                full par). If the month is not paid in full, the unpaid balance
-                compounds (+25 bps/month, capped). Cash is never blocked by the
-                threshold.
+                <span className="text-mist-200">Payment logic:</span> each month
+                the model pays arrears first, then the current coupon. Cash goes
+                first and is never gated — the reserve is drawn down to zero
+                before anything else happens. Once cash is gone, the shortfall
+                is covered by selling Bitcoin, but only while BTC
+                mark-to-market clears the suspension threshold. Below it, no
+                Bitcoin is sold and the dividend is suspended.
+              </p>
+              <p>
+                <span className="text-mist-200">Suspended, not skipped:</span>{" "}
+                unpaid dividends accumulate and compound monthly until they can
+                be paid in full — the first missed month accrues at the coupon +
+                25 bps, and each further month unpaid adds another 25 bps, up to
+                a 20% cap. When cash or a Bitcoin price recovery makes the
+                arrears payable, the whole balance is paid and the clock resets.
+                These are the certificate&apos;s own compounded-dividend terms,
+                not a modelling choice.
+              </p>
+              <p>
+                <span className="text-mist-200">Net claim:</span> the threshold
+                is measured against what the preferred actually costs, not its
+                stated amount — SATA marked at its own market price, less the
+                STRC position Strive holds on its balance sheet, marked at
+                STRC&apos;s market price. Share count comes from the last 10-Q
+                (505,000 shares, quarter ended 30 Jun 2026); the mark is live.
+                STRC nets the claim down dollar for dollar but is never counted
+                as cash — it is Bitcoin-correlated preferred paper, and it would
+                be sold into the same stress that closes the gate.
               </p>
             </div>
           </>
@@ -663,14 +671,9 @@ export function PreferredsView({
         ) : (
           <p className="mt-6 text-sm text-mist-500">Baseline pending.</p>
         )}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="border border-white/8 bg-ink-900/40 px-4 py-3 font-mono text-sm text-mist-500">
-            STRC: not modeled yet
-          </div>
-          <div className="border border-white/8 bg-ink-900/40 px-4 py-3 font-mono text-sm text-mist-400">
-            SATA mean NPV {formatUsd(ready?.baseline?.mean_npv)} · median{" "}
-            {formatUsd(ready?.baseline?.median_npv)}
-          </div>
+        <div className="mt-6 border border-white/8 bg-ink-900/40 px-4 py-3 font-mono text-sm text-mist-400">
+          SATA mean NPV {formatUsd(ready?.baseline?.mean_npv)} · median{" "}
+          {formatUsd(ready?.baseline?.median_npv)}
         </div>
       </section>
 
@@ -680,13 +683,7 @@ export function PreferredsView({
         <p className="mt-2 text-mist-400">
           Same dividend machine, different opening Bitcoin prices.
         </p>
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="border border-white/8 bg-ink-900/60 p-5">
-            <h3 className="font-display text-lg text-mist-100">STRC</h3>
-            <p className="mt-6 text-sm text-mist-500">
-              Not modeled yet — see the note under Assumptions.
-            </p>
-          </div>
+        <div className="mt-8">
           <div className="border border-white/8 bg-ink-900/60 p-5">
             <h3 className="font-display text-lg text-mist-100">SATA</h3>
             <div className="mt-4">
@@ -723,7 +720,7 @@ export function PreferredsView({
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <KnobCard
             title="Suspension threshold"
-            caption="BTC mark-to-market must clear this × total par before Bitcoin can be sold for coupons. Cash always pays."
+            caption="Cash pays first and runs to zero. After that, Bitcoin is sold only while BTC mark-to-market clears this × the net claim; below it the dividend is suspended and compounds until it can be paid."
             valueLabel={`${threshX.toFixed(2)}× → ${formatUsd(threshHit?.fair_value as number | null)}`}
             slider={
               <GridSlider
@@ -769,235 +766,9 @@ export function PreferredsView({
         <h2 className="font-display text-3xl text-mist-100">Hedge the wipeout</h2>
         <p className="mt-2 text-mist-400">
           Wipeout is not Bitcoin at zero — it is a seniority band. Cash covers
-          only so many months of coupons; hedge the residual price. For STRC,
-          compare direct puts vs IBIT put spreads on a $10k book. SATA hedges
+          only so many months of coupons; hedge the residual price. SATA hedges
           with IBIT puts sized to the claims / assets strike.
         </p>
-
-        {hedgeStrc ? (
-          <div className="mt-8 space-y-8">
-            <div className="border border-white/8 bg-ink-900/60 p-5 md:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mist-500">
-                STRC wipeout band
-              </p>
-              <p className="mt-2 text-sm text-mist-400">
-                {String(hedgeStrc.seniors ?? "Converts + STRF")} sit ahead of
-                STRC. Fully covered until BTC ≈{" "}
-                {formatUsd(Number(hedgeStrc.btc_par), 0)}; wiped by ≈{" "}
-                {formatUsd(Number(hedgeStrc.btc_zero), 0)}.
-              </p>
-              <div className="mt-6">
-                <StrcWipeoutBand
-                  spot={
-                    Number(
-                      hedgeStrc.btc_spot ?? story.hedge?.btc_price ?? btc ?? 0
-                    ) || null
-                  }
-                  btcPar={Number(hedgeStrc.btc_par)}
-                  btcZero={Number(hedgeStrc.btc_zero)}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="border border-white/8 bg-ink-900/60 p-5">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mist-500">
-                  Hedge amount / share
-                </p>
-                <p className="mt-2 font-mono text-4xl tabular-nums text-ember-400">
-                  {formatUsd(Number(hedgeStrc.hedge_amount_per_share))}
-                </p>
-                <p className="mt-3 font-mono text-[11px] text-mist-500">
-                  {formatUsd(Number(hedgeStrc.strc_price))} −{" "}
-                  {formatUsd(Number(hedgeStrc.cash_covered_dividend_per_share))}{" "}
-                  cash-covered
-                </p>
-              </div>
-              <div className="border border-white/8 bg-ink-900/60 p-5">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mist-500">
-                  Cash covers
-                </p>
-                <p className="mt-2 font-mono text-4xl tabular-nums text-mist-100">
-                  {Number(hedgeStrc.usd_months_dividend_coverage).toFixed(1)}
-                  <span className="ml-2 text-lg text-mist-500">mo</span>
-                </p>
-                <p className="mt-3 font-mono text-[11px] text-mist-500">
-                  Leave those coupons unhedged
-                </p>
-              </div>
-            </div>
-
-            <div className="border border-white/8 bg-ink-900/60 p-5 md:p-6">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mist-500">
-                Why not MSTR puts
-              </p>
-              <p className="mt-2 text-sm text-mist-400">
-                When Bitcoin crashes hard enough that preferred dividends pause,
-                unpaid coupons may still accumulate — but MSTR trades more like
-                a call on Bitcoin than a claim that goes to zero. Residual
-                optionality means the common is probably still worth something
-                in a deep bear market, so you cannot pin a reliable wipeout
-                strike. Implied vol is also extreme, so the puts are expensive
-                carry for a hedge that may not pay when you need it. Prefer STRC
-                puts (same name) or IBIT spreads (BTC-linked wipeout zone).
-              </p>
-            </div>
-
-            {strcHedgeComparison.length ? (
-              <div className="border border-white/8 bg-ink-900/60 p-5 md:p-6">
-                <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mist-500">
-                  $10k STRC book — puts vs IBIT spreads
-                </p>
-                <p className="mt-2 text-sm text-mist-400">
-                  Best strike per instrument by max total yield (dividend −
-                  borrow − theta + tax). Grey = after-tax hedge cost; ember =
-                  total yield.
-                  {hedgeWinner?.leg
-                    ? ` Live winner: ${hedgeWinner.leg} @ ${String(hedgeWinner.best_strike)} → ${formatUsd(hedgeWinner.total_yield_10k, 0)}.`
-                    : null}
-                </p>
-                <div className="mt-6">
-                  <HedgeComparisonChart rows={strcHedgeComparison} />
-                </div>
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full min-w-[36rem] text-left font-mono text-xs text-mist-400">
-                    <thead>
-                      <tr className="border-b border-white/10 text-mist-500">
-                        <th className="py-2 font-normal">Leg</th>
-                        <th className="py-2 font-normal">Expiry</th>
-                        <th className="py-2 text-right font-normal">Best</th>
-                        <th className="py-2 text-right font-normal">Cost</th>
-                        <th className="py-2 text-right font-normal">Yield</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {strcHedgeComparison.map((row) => (
-                        <tr
-                          key={String(row.leg)}
-                          className="border-b border-white/5"
-                        >
-                          <td className="py-2 text-mist-200">{row.leg}</td>
-                          <td className="py-2">{row.expirations}</td>
-                          <td className="py-2 text-right tabular-nums">
-                            {row.best_strike != null
-                              ? String(row.best_strike)
-                              : "—"}
-                          </td>
-                          <td className="py-2 text-right tabular-nums">
-                            {formatUsd(row.hedge_cost_10k, 0)}
-                          </td>
-                          <td
-                            className={`py-2 text-right tabular-nums ${
-                              (row.total_yield_10k ?? 0) >= 0
-                                ? "text-ember-400"
-                                : "text-mist-500"
-                            }`}
-                          >
-                            {formatUsd(row.total_yield_10k, 0)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null}
-
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mist-500">
-                Instruments
-              </p>
-              <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                {strcHedgeLegs.map((leg) => (
-                  <div
-                    key={String(leg.leg)}
-                    className="border border-white/8 bg-ink-900/60 p-5"
-                  >
-                    <p className="font-display text-lg text-mist-100">{leg.leg}</p>
-                    <p className="mt-1 font-mono text-xs text-mist-500">
-                      {leg.last_expiration ?? "—"}
-                      {leg.best?.strike_label
-                        ? ` · best ${leg.best.strike_label}`
-                        : ""}
-                    </p>
-                    <dl className="mt-4 space-y-2 font-mono text-xs">
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-mist-500">Yield / $10k</dt>
-                        <dd className="tabular-nums text-ember-400">
-                          {formatUsd(leg.best?.total_yield, 0)}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-mist-500">Hedge cost</dt>
-                        <dd className="tabular-nums text-mist-200">
-                          {formatUsd(leg.best?.hedge_cost_after_tax, 0)}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-mist-500">Mid / contracts</dt>
-                        <dd className="tabular-nums text-mist-200">
-                          {formatUsd(leg.best?.mid_price)} ·{" "}
-                          {leg.best?.contracts_needed != null
-                            ? Number(leg.best.contracts_needed).toFixed(2)
-                            : "—"}
-                        </dd>
-                      </div>
-                    </dl>
-                    {leg.ladder && leg.ladder.length > 0 ? (
-                      <ul className="mt-4 space-y-1 border-t border-white/5 pt-3 font-mono text-[10px] text-mist-600">
-                        {leg.ladder.slice(0, 5).map((row, i) => (
-                          <li
-                            key={i}
-                            className="flex justify-between gap-2 tabular-nums"
-                          >
-                            <span>
-                              {row.spread != null
-                                ? String(row.spread)
-                                : `$${row.strike}`}
-                            </span>
-                            <span>
-                              {row.total_yield != null
-                                ? formatUsd(Number(row.total_yield), 0)
-                                : "—"}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {leg.pnl_series && leg.pnl_series.length > 0 ? (
-                      <div className="mt-4">
-                        <p className="mb-2 font-mono text-[10px] text-mist-600">
-                          Option book P&L vs shock
-                        </p>
-                        <HedgePnlChart series={leg.pnl_series} />
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-                {!strcHedgeLegs.length ? (
-                  <>
-                    <div className="border border-white/8 bg-ink-900/60 p-5">
-                      <p className="font-display text-lg text-mist-100">STRC puts</p>
-                      <p className="mt-4 text-sm text-mist-400">
-                        Direct hedge near{" "}
-                        {formatUsd(Number(hedgeStrc.hedge_amount_per_share))}.
-                        Option chain detail is not available yet.
-                      </p>
-                    </div>
-                    <div className="border border-white/8 bg-ink-900/60 p-5">
-                      <p className="font-display text-lg text-mist-100">IBIT spreads</p>
-                      <p className="mt-4 text-sm text-mist-400">
-                        12/4, 12/5, 10/5 near wipeout.
-                      </p>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-6 text-sm text-mist-500">STRC hedge strip unavailable.</p>
-        )}
 
         {/* SATA — IBIT long puts */}
         <div className="mt-12 border border-white/8 bg-ink-900/60 p-5 md:p-6">
