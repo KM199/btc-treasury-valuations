@@ -526,6 +526,27 @@ def _npv_hist_friendly(results: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _write_yield_curve_chart(output_dir: Path, site_dir: Path) -> None:
+    """Write web/public/data/yield_curve.json from live curve or fallback."""
+    from preferred_valuation import build_yield_curve_chart_payload
+
+    yield_curve = build_yield_curve_chart_payload(output_dir)
+    yield_path = site_dir / "yield_curve.json"
+    if yield_curve is None:
+        raise RuntimeError(
+            "No Treasury curve for the site chart: missing both "
+            f"{output_dir / 'yield_curve.json'} and yield_curve_fallback.json"
+        )
+    with yield_path.open("w") as f:
+        json.dump(yield_curve, f, indent=2)
+        f.write("\n")
+    n_pts = len(yield_curve.get("curve") or [])
+    print(
+        f"  ✓ Wrote {yield_path} "
+        f"({n_pts} pts, as-of {yield_curve.get('as_of_date')})"
+    )
+
+
 def write_site_data(
     output_dir: Path = OUTPUT_DIR,
     site_dir: Path = SITE_DATA_DIR,
@@ -575,28 +596,16 @@ def write_site_data(
             f.write("\n")
         print(f"  ✓ Wrote {dilution_dst}")
 
+    # Always write the chart JSON (live FRED dump, else committed fallback).
+    # The 15-minute job is --market-only; the curve still has to land on the site.
+    _write_yield_curve_chart(output_dir, site_dir)
+
     if not market_only:
         fair = build_fair_values(output_dir)
         fair_path = site_dir / "fair_values.json"
         with fair_path.open("w") as f:
             json.dump(fair, f, indent=2)
         print(f"  ✓ Wrote {fair_path}")
-
-        from preferred_valuation import build_yield_curve_chart_payload
-
-        yield_curve = build_yield_curve_chart_payload(output_dir)
-        yield_path = site_dir / "yield_curve.json"
-        if yield_curve is not None:
-            with yield_path.open("w") as f:
-                json.dump(yield_curve, f, indent=2)
-                f.write("\n")
-            n_pts = len(yield_curve.get("curve") or [])
-            print(
-                f"  ✓ Wrote {yield_path} "
-                f"({n_pts} pts, as-of {yield_curve.get('as_of_date')})"
-            )
-        else:
-            print("  ⚠ Yield curve chart skipped (no live/fallback curve)")
 
         sata = _load_json(output_dir / "sata_valuation_results.json")
         strc = _load_json(output_dir / "strc_valuation_results.json")

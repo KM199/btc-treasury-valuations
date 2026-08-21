@@ -40,6 +40,9 @@ web/*.tsbuildinfo
 *_data.json
 *_options.json
 yield_curve.json
+# Website chart JSON — written every market snapshot from the live curve
+# (or yield_curve_fallback.json). Must be tracked so Vercel can compile it.
+!web/public/data/yield_curve.json
 treasury_extracted_data.json
 btc_historical_data.json
 sata_valuation_results.json

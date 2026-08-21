@@ -392,42 +392,41 @@ def fetch_treasury_yield_curve(
 
     outp = Path(output_path)
 
-    if not force_refresh:
-        if is_fresh(YIELD_CURVE_CACHE_KEY):
-            cached = read_cache(YIELD_CURVE_CACHE_KEY)
-            if cached is not None:
-                print(f"  ✓ Cache hit: {YIELD_CURVE_CACHE_KEY}")
-                record_cache_hit(YIELD_CURVE_CACHE_KEY)
-                print(f"\n   ✓ FRED observation as-of: {cached.get('as_of_date', 'N/A')}")
-                return cached
-
-    try:
-        payload = get_or_fetch("treasury_yield_curve", fetch, force_refresh=force_refresh)
+    def _persist_live(payload: dict) -> None:
         outp.parent.mkdir(parents=True, exist_ok=True)
         with open(outp, "w") as f:
             json.dump(payload, f, indent=2)
-        print(f"\n   ✓ FRED observation as-of: {payload.get('as_of_date', 'N/A')}")
         print(f"   ✓ Saved to {outp}")
-        # Refresh the tracked (committed) fallback cache on every genuine
-        # success, so environments where the live fetch fails (e.g. FRED
-        # deprioritizing a CI provider's IP range) still fall back to recent
-        # real data instead of a hardcoded constant.
-        try:
-            curve = TreasuryZeroCurve.from_saved_dict(payload)
-            save_yield_curve_fallback_cache(curve, YIELD_CURVE_FALLBACK_PATH)
-            print(f"   ✓ Updated fallback cache: {YIELD_CURVE_FALLBACK_PATH.name}")
-        except Exception as cache_err:
-            print(f"   ⚠ Could not update fallback cache: {cache_err}")
+
+    try:
+        payload = get_or_fetch("treasury_yield_curve", fetch, force_refresh=force_refresh)
+        print(f"\n   ✓ FRED observation as-of: {payload.get('as_of_date', 'N/A')}")
+        _persist_live(payload)
+        # Refresh the tracked (committed) fallback only on a genuine FRED
+        # fetch — not on a 1h cache hit — so last-known-good stays current.
+        if YIELD_CURVE_CACHE_KEY in run_fresh_fetches():
+            try:
+                curve = TreasuryZeroCurve.from_saved_dict(payload)
+                save_yield_curve_fallback_cache(curve, YIELD_CURVE_FALLBACK_PATH)
+                print(f"   ✓ Updated fallback cache: {YIELD_CURVE_FALLBACK_PATH.name}")
+            except Exception as cache_err:
+                print(f"   ⚠ Could not update fallback cache: {cache_err}")
         return payload
     except Exception as e:
         print(f"\n   ✗ Could not fetch fresh yield curve: {e}")
-        stale = _load_yield_curve_json(outp)
-        if stale is not None:
-            print(f"   ✓ Using existing {outp} (as-of {stale.get('as_of_date', 'N/A')})")
+        for stale_path, label in (
+            (outp, str(outp)),
+            (YIELD_CURVE_FALLBACK_PATH, YIELD_CURVE_FALLBACK_PATH.name),
+        ):
+            stale = _load_yield_curve_json(stale_path)
+            if stale is None:
+                continue
+            print(f"   ✓ Using {label} (as-of {stale.get('as_of_date', 'N/A')})")
+            _persist_live(stale)
             write_cache(YIELD_CURVE_CACHE_KEY, stale)
             record_cache_hit(YIELD_CURVE_CACHE_KEY)
             return stale
-        print("   ⚠ No yield_curve.json — option deltas will use flat 4.2% or retry FRED live")
+        print("   ⚠ No yield_curve.json or fallback — option deltas will use flat 4.2% or retry FRED live")
         return None
 
 
