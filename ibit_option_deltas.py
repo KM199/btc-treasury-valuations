@@ -107,8 +107,12 @@ def american_price_crr(
     is_call: bool,
 ) -> float:
     """American option value (CRR binomial), continuous yield q."""
-    if T <= 0 or sigma <= 0 or S <= 0 or K <= 0 or n_steps < 2:
+    if T <= 0 or sigma <= 0 or S < 0 or K <= 0 or n_steps < 2:
         return float("nan")
+    if S == 0:
+        # Dead underlying — the lattice is multiplicative and degenerates here.
+        # An American put is exercised immediately for K; a call is worthless.
+        return 0.0 if is_call else float(K)
 
     n = int(n_steps)
     dt = T / n

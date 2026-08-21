@@ -307,8 +307,15 @@ export type HedgeStory = {
       option_pnl?: number;
       preferred_pnl?: number | null;
       preferred_fair?: number | null;
+      preferred_extrapolated?: boolean | null;
       net_pnl?: number;
     }>;
+    scenario_grid_pct?: number | null;
+    zero_btc_fair?: {
+      fair_value?: number;
+      months_paid?: number;
+      accumulated_unpaid_dividends?: number;
+    } | null;
     ladder?: Array<Record<string, number | string | null | undefined>>;
     note?: string;
   } | null;
@@ -345,6 +352,22 @@ export type PreferredStory = {
     };
     note?: string;
   } | null;
+};
+
+/** Site chart payload for the Treasury zero curve used in SATA NPV. */
+export type YieldCurveChart = {
+  as_of_date?: string | null;
+  source?: string | null;
+  flat_after_years?: number;
+  reference_zero_annual?: number | null;
+  max_years?: number;
+  pillars: Array<{
+    years: number;
+    zero_annual: number;
+    discount?: number;
+  }>;
+  curve: Array<{ years: number; zero_annual: number; is_pillar?: boolean }>;
+  note?: string;
 };
 
 export function formatUsd(n: number | null | undefined, digits = 2): string {

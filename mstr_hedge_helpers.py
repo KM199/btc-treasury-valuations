@@ -68,6 +68,8 @@ STRC_MAX_COVERAGE_GAP = 5.0  # max $ strike can sit below hedge_amount (e.g. $85
 MSTR_MAX_COVERAGE_GAP = 8.0  # $ strike can sit below hedge reference (hedge_amount × MSTR/STRC)
 CONTRACT_MULT = 100
 SHOCK_PCTS = list(range(-50, 51, 10))
+# Wide grid for the site's stress chart — the full ±100% spot range.
+SHOCK_PCTS_WIDE = list(range(-100, 101, 10))
 # IBIT vertical put spreads (long, short) near wipeout zone.
 # $11 excluded — not listed on both calendar expiries (too thin to trust mids).
 IBIT_EXCLUDED_PUT_STRIKES: frozenset[float] = frozenset({11.0})
@@ -452,9 +454,11 @@ def compute_pnl_sensitivity(
     data: dict,
     *,
     yield_curve_path: str | Path = "output/yield_curve.json",
+    shock_pcts: list[int] | None = None,
 ) -> pd.DataFrame:
     if hedge_calc.empty or "delta" not in hedge_calc.columns or not hedge_calc["delta"].notna().any():
         return pd.DataFrame()
+    shocks = list(shock_pcts) if shock_pcts else SHOCK_PCTS
     curve_rf, _ = _load_treasury_zero_curve(data, yield_curve_path)
     ts = data.get("timestamp")
     valuation_dt = _parse_valuation_datetime(str(ts)) if ts else datetime.now(timezone.utc)
@@ -486,7 +490,7 @@ def compute_pnl_sensitivity(
             "Option contracts": round(n_listed, 4),
         }
         if pd.isna(row.get("delta")):
-            for p in SHOCK_PCTS:
+            for p in shocks:
                 rec[f"{p:+d}%"] = float("nan")
             rows.append(rec)
             continue
@@ -517,7 +521,7 @@ def compute_pnl_sensitivity(
                     n_steps=DEFAULT_TREE_STEPS, is_call=False,
                 )
                 V0 = V0_long - V0_short
-            for p in SHOCK_PCTS:
+            for p in shocks:
                 h = p / 100.0
                 S1 = S0 * (1 + h)
                 r1 = ri * (1 + h)
@@ -537,7 +541,7 @@ def compute_pnl_sensitivity(
         else:
             gam = float(row["gamma"]) if pd.notna(row.get("gamma")) else 0.0
             rho = float(row["rho"]) if pd.notna(row.get("rho")) else 0.0
-            for p in SHOCK_PCTS:
+            for p in shocks:
                 h = p / 100.0
                 dS = h * S0
                 dr = h * ri

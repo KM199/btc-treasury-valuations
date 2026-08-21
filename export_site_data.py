@@ -582,6 +582,22 @@ def write_site_data(
             json.dump(fair, f, indent=2)
         print(f"  ✓ Wrote {fair_path}")
 
+        from preferred_valuation import build_yield_curve_chart_payload
+
+        yield_curve = build_yield_curve_chart_payload(output_dir)
+        yield_path = site_dir / "yield_curve.json"
+        if yield_curve is not None:
+            with yield_path.open("w") as f:
+                json.dump(yield_curve, f, indent=2)
+                f.write("\n")
+            n_pts = len(yield_curve.get("curve") or [])
+            print(
+                f"  ✓ Wrote {yield_path} "
+                f"({n_pts} pts, as-of {yield_curve.get('as_of_date')})"
+            )
+        else:
+            print("  ⚠ Yield curve chart skipped (no live/fallback curve)")
+
         sata = _load_json(output_dir / "sata_valuation_results.json")
         strc = _load_json(output_dir / "strc_valuation_results.json")
         price_by = {

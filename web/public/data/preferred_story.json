@@ -25,7 +25,14 @@
         "shares_outstanding": 7829500,
         "annual_dividend_rate": 0.13,
         "monthly_dividend_per_share": 1.0833333333333333,
-        "par_value": 100.0
+        "par_value": 100.0,
+        "compounded_dividend_increment": 0.0025,
+        "sata_market_price": 99.69,
+        "sata_market_claim": 780522855.0,
+        "strc_shares_held": 505000.0,
+        "strc_market_price": 94.01000213623047,
+        "strc_position_value": 47475051.07879639,
+        "coverage_claim_value": 733047803.9212036
       },
       "breakeven": {
         "monthly_dividend": 1.0833333333333333,
@@ -1231,9 +1238,393 @@
         "max": 1200.0,
         "n": 10000
       },
-      "scenarios": [],
-      "threshold_sensitivity": [],
-      "dividend_rate_sensitivity": []
+      "scenarios": [
+        {
+          "btc_start_pct": -0.75,
+          "btc_start": 15886.1376953125,
+          "fair_value": 42.83195085795779,
+          "median_npv": 19.198359664672655,
+          "mean_months_paid": 22.8641,
+          "std_npv": 35.70431863204775,
+          "npv_change_vs_baseline_pct": -55.30193951983949,
+          "elasticity": 0.73735919359786
+        },
+        {
+          "btc_start_pct": -0.5,
+          "btc_start": 31772.275390625,
+          "fair_value": 65.30381571435358,
+          "median_npv": 56.81703541245139,
+          "mean_months_paid": 40.926,
+          "std_npv": 46.3802740370773,
+          "npv_change_vs_baseline_pct": -31.851016684589872,
+          "elasticity": 0.6370203336917974
+        },
+        {
+          "btc_start_pct": -0.4000000059604645,
+          "btc_start": 38126.73046875,
+          "fair_value": 72.64492878075956,
+          "median_npv": 66.42420000767154,
+          "mean_months_paid": 49.9402,
+          "std_npv": 48.88546942522175,
+          "npv_change_vs_baseline_pct": -24.190064772264197,
+          "elasticity": 0.6047516102951037
+        },
+        {
+          "btc_start_pct": -0.30000001192092896,
+          "btc_start": 44481.1875,
+          "fair_value": 79.2912220900426,
+          "median_npv": 74.13419245596708,
+          "mean_months_paid": 58.8789,
+          "std_npv": 50.54701228730842,
+          "npv_change_vs_baseline_pct": -17.254204640830906,
+          "elasticity": 0.5751401318403481
+        },
+        {
+          "btc_start_pct": -0.25,
+          "btc_start": 47658.4140625,
+          "fair_value": 82.49777396573919,
+          "median_npv": 77.50083322382679,
+          "mean_months_paid": 63.2939,
+          "std_npv": 51.15605853305613,
+          "npv_change_vs_baseline_pct": -13.907949174952927,
+          "elasticity": 0.5563179669981171
+        },
+        {
+          "btc_start_pct": -0.20000000298023224,
+          "btc_start": 50835.640625,
+          "fair_value": 85.37847902075444,
+          "median_npv": 80.3773858265718,
+          "mean_months_paid": 67.7662,
+          "std_npv": 51.76306824822824,
+          "npv_change_vs_baseline_pct": -10.90173707871699,
+          "elasticity": 0.5450868458134225
+        },
+        {
+          "btc_start_pct": -0.15000000596046448,
+          "btc_start": 54012.8671875,
+          "fair_value": 88.13237470431537,
+          "median_npv": 83.33501796769515,
+          "mean_months_paid": 72.1399,
+          "std_npv": 52.17820533916873,
+          "npv_change_vs_baseline_pct": -8.027859205909579,
+          "elasticity": 0.5351905924607419
+        },
+        {
+          "btc_start_pct": -0.10000000149011612,
+          "btc_start": 57190.09375,
+          "fair_value": 90.6124855494343,
+          "median_npv": 86.27971260003027,
+          "mean_months_paid": 76.3513,
+          "std_npv": 52.55464585773517,
+          "npv_change_vs_baseline_pct": -5.439694475326642,
+          "elasticity": 0.5439694394268879
+        },
+        {
+          "btc_start_pct": -0.05000000074505806,
+          "btc_start": 60367.32421875,
+          "fair_value": 93.35587401189865,
+          "median_npv": 88.85038333199054,
+          "mean_months_paid": 80.4878,
+          "std_npv": 53.02827084994691,
+          "npv_change_vs_baseline_pct": -2.576781603987659,
+          "elasticity": 0.5153563131181244
+        },
+        {
+          "btc_start_pct": -0.009999999776482582,
+          "btc_start": 62909.10546875,
+          "fair_value": 95.3472080019845,
+          "median_npv": 90.72744445553421,
+          "mean_months_paid": 83.7795,
+          "std_npv": 53.34490765212353,
+          "npv_change_vs_baseline_pct": -0.49868884047489026,
+          "elasticity": 0.4986888516214547
+        },
+        {
+          "btc_start_pct": 0.0,
+          "btc_start": 63544.55078125,
+          "fair_value": 95.82507696719638,
+          "median_npv": 91.14146839617342,
+          "mean_months_paid": 84.5832,
+          "std_npv": 53.40518734941186,
+          "npv_change_vs_baseline_pct": 0.0,
+          "elasticity": null
+        },
+        {
+          "btc_start_pct": 0.009999999776482582,
+          "btc_start": 64179.99609375,
+          "fair_value": 96.25604582286009,
+          "median_npv": 91.6472761494164,
+          "mean_months_paid": 85.3685,
+          "std_npv": 53.50535210947084,
+          "npv_change_vs_baseline_pct": 0.4497453790840573,
+          "elasticity": 0.44974538913665013
+        },
+        {
+          "btc_start_pct": 0.05000000074505806,
+          "btc_start": 66721.78125,
+          "fair_value": 97.9299813285419,
+          "median_npv": 93.38373128980339,
+          "mean_months_paid": 88.5763,
+          "std_npv": 53.747658036710504,
+          "npv_change_vs_baseline_pct": 2.1966111877646455,
+          "elasticity": 0.43932223100651774
+        },
+        {
+          "btc_start_pct": 0.10000000149011612,
+          "btc_start": 69899.0078125,
+          "fair_value": 99.9977689201257,
+          "median_npv": 95.62993080629423,
+          "mean_months_paid": 92.5724,
+          "std_npv": 53.97881808200353,
+          "npv_change_vs_baseline_pct": 4.354488496114375,
+          "elasticity": 0.4354488431227441
+        },
+        {
+          "btc_start_pct": 0.15000000596046448,
+          "btc_start": 73076.234375,
+          "fair_value": 102.17286806699508,
+          "median_npv": 97.68802276397395,
+          "mean_months_paid": 96.4537,
+          "std_npv": 54.21149295214309,
+          "npv_change_vs_baseline_pct": 6.624352727597313,
+          "elasticity": 0.44162349762461306
+        },
+        {
+          "btc_start_pct": 0.20000000298023224,
+          "btc_start": 76253.4609375,
+          "fair_value": 104.20986949922079,
+          "median_npv": 99.25669742637805,
+          "mean_months_paid": 100.3593,
+          "std_npv": 54.454492215116964,
+          "npv_change_vs_baseline_pct": 8.75010258003211,
+          "elasticity": 0.43750512248227114
+        },
+        {
+          "btc_start_pct": 0.25,
+          "btc_start": 79430.6875,
+          "fair_value": 106.21537370049744,
+          "median_npv": 101.43015924937059,
+          "mean_months_paid": 104.0864,
+          "std_npv": 54.56866379530296,
+          "npv_change_vs_baseline_pct": 10.84298292487461,
+          "elasticity": 0.4337193169949844
+        },
+        {
+          "btc_start_pct": 0.30000001192092896,
+          "btc_start": 82607.9140625,
+          "fair_value": 107.9288356278087,
+          "median_npv": 102.85217888755017,
+          "mean_months_paid": 107.7581,
+          "std_npv": 54.73007675739627,
+          "npv_change_vs_baseline_pct": 12.63109724895475,
+          "elasticity": 0.4210365582346687
+        },
+        {
+          "btc_start_pct": 0.4000000059604645,
+          "btc_start": 88962.375,
+          "fair_value": 111.44587493144572,
+          "median_npv": 106.66022300942808,
+          "mean_months_paid": 114.6899,
+          "std_npv": 55.02047726234399,
+          "npv_change_vs_baseline_pct": 16.30136751113362,
+          "elasticity": 0.40753418170560796
+        },
+        {
+          "btc_start_pct": 0.5,
+          "btc_start": 95316.828125,
+          "fair_value": 114.7228163188098,
+          "median_npv": 110.16922184250166,
+          "mean_months_paid": 121.2036,
+          "std_npv": 55.161090895253636,
+          "npv_change_vs_baseline_pct": 19.721079230734823,
+          "elasticity": 0.39442158461469645
+        },
+        {
+          "btc_start_pct": 0.75,
+          "btc_start": 111202.9609375,
+          "fair_value": 121.917821105191,
+          "median_npv": 117.82753531116255,
+          "mean_months_paid": 136.1421,
+          "std_npv": 55.36808918755488,
+          "npv_change_vs_baseline_pct": 27.229557192974546,
+          "elasticity": 0.36306076257299397
+        }
+      ],
+      "threshold_sensitivity": [
+        {
+          "threshold_multiplier": 0.0,
+          "fair_value": 106.47726042138194,
+          "mean_months_paid": 138.4323,
+          "median_npv": 96.62122614458697,
+          "std_npv": 43.001212918561386,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 0.25,
+          "fair_value": 104.36177357926066,
+          "mean_months_paid": 121.616,
+          "median_npv": 94.99403980088655,
+          "std_npv": 44.26949402207772,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 0.5,
+          "fair_value": 101.64736300345896,
+          "mean_months_paid": 107.2778,
+          "median_npv": 94.25274117104775,
+          "std_npv": 46.87669512291945,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 0.75,
+          "fair_value": 98.59366811926957,
+          "mean_months_paid": 95.0824,
+          "median_npv": 92.41764119892476,
+          "std_npv": 50.06054797805174,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 1.0,
+          "fair_value": 95.82507696719638,
+          "mean_months_paid": 84.5832,
+          "median_npv": 91.14146839617342,
+          "std_npv": 53.40518734941186,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 1.25,
+          "fair_value": 92.7352527224323,
+          "mean_months_paid": 75.8439,
+          "median_npv": 87.9407782667327,
+          "std_npv": 56.6342422931988,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 1.5,
+          "fair_value": 90.0530169943585,
+          "mean_months_paid": 68.5511,
+          "median_npv": 83.36435838022848,
+          "std_npv": 59.79870152910659,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 1.75,
+          "fair_value": 87.6810568919526,
+          "mean_months_paid": 62.4408,
+          "median_npv": 77.79455065030078,
+          "std_npv": 62.451366448576,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "threshold_multiplier": 2.0,
+          "fair_value": 85.25452872313782,
+          "mean_months_paid": 57.2423,
+          "median_npv": 71.10395109163346,
+          "std_npv": 64.86913461355128,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        }
+      ],
+      "dividend_rate_sensitivity": [
+        {
+          "dividend_rate": 0.12000000000000001,
+          "fair_value": 91.42916170661802,
+          "mean_months_paid": 89.0768,
+          "median_npv": 87.93542717763819,
+          "std_npv": 50.61467934885035,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": -7.692307692307689
+        },
+        {
+          "dividend_rate": 0.12250000000000001,
+          "fair_value": 92.4455242996589,
+          "mean_months_paid": 87.9215,
+          "median_npv": 88.68239876034774,
+          "std_npv": 51.274757233696135,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": -5.769230769230763
+        },
+        {
+          "dividend_rate": 0.125,
+          "fair_value": 93.63162629249462,
+          "mean_months_paid": 86.8548,
+          "median_npv": 89.54496246875429,
+          "std_npv": 52.052980503270376,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": -3.8461538461538494
+        },
+        {
+          "dividend_rate": 0.1275,
+          "fair_value": 94.7575127283464,
+          "mean_months_paid": 85.6112,
+          "median_npv": 90.36046794359115,
+          "std_npv": 52.766334459953946,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": -1.9230769230769247
+        },
+        {
+          "dividend_rate": 0.13,
+          "fair_value": 95.82507696719638,
+          "mean_months_paid": 84.5832,
+          "median_npv": 91.14146839617342,
+          "std_npv": 53.40518734941186,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 0.0
+        },
+        {
+          "dividend_rate": 0.1325,
+          "fair_value": 96.83642665229813,
+          "mean_months_paid": 83.3969,
+          "median_npv": 91.98939812800725,
+          "std_npv": 54.07036322897207,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 1.9230769230769247
+        },
+        {
+          "dividend_rate": 0.135,
+          "fair_value": 97.85962006426507,
+          "mean_months_paid": 82.3867,
+          "median_npv": 92.8498223982406,
+          "std_npv": 54.72479269312372,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 3.8461538461538494
+        },
+        {
+          "dividend_rate": 0.1375,
+          "fair_value": 98.83512666967196,
+          "mean_months_paid": 81.4395,
+          "median_npv": 93.66350781439711,
+          "std_npv": 55.33086106417064,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 5.7692307692307745
+        },
+        {
+          "dividend_rate": 0.14,
+          "fair_value": 99.74223508700524,
+          "mean_months_paid": 80.3453,
+          "median_npv": 94.52273706128145,
+          "std_npv": 55.89873368426385,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 7.692307692307699
+        },
+        {
+          "dividend_rate": 0.14250000000000002,
+          "fair_value": 100.72964665783886,
+          "mean_months_paid": 79.4399,
+          "median_npv": 95.2199794226623,
+          "std_npv": 56.545905590634746,
+          "btc_holdings": 0.0,
+          "dividend_rate_change_pct": 9.615384615384624
+        }
+      ]
     },
     "STRC": {
       "ticker": "STRC",
@@ -1706,59 +2097,193 @@
       },
       "pnl_series": [
         {
+          "shock_pct": -100,
+          "pnl": -1063.4,
+          "option_pnl": 27828.79,
+          "preferred_pnl": -28892.19,
+          "preferred_fair": 19.2,
+          "preferred_extrapolated": false,
+          "net_pnl": -1063.4
+        },
+        {
+          "shock_pct": -90,
+          "pnl": -3336.64,
+          "option_pnl": 21991.12,
+          "preferred_pnl": -25327.76,
+          "preferred_fair": 28.65,
+          "preferred_extrapolated": false,
+          "net_pnl": -3336.64
+        },
+        {
+          "shock_pct": -80,
+          "pnl": -4972.49,
+          "option_pnl": 16790.84,
+          "preferred_pnl": -21763.33,
+          "preferred_fair": 38.11,
+          "preferred_extrapolated": false,
+          "net_pnl": -4972.49
+        },
+        {
+          "shock_pct": -70,
+          "pnl": -5674.79,
+          "option_pnl": 12611.72,
+          "preferred_pnl": -18286.51,
+          "preferred_fair": 47.33,
+          "preferred_extrapolated": false,
+          "net_pnl": -5674.79
+        },
+        {
+          "shock_pct": -60,
+          "pnl": -5564.13,
+          "option_pnl": 9333.16,
+          "preferred_pnl": -14897.29,
+          "preferred_fair": 56.32,
+          "preferred_extrapolated": false,
+          "net_pnl": -5564.13
+        },
+        {
           "shock_pct": -50,
-          "option_pnl": 6437.86,
-          "pnl": 6437.86
+          "pnl": -4713.28,
+          "option_pnl": 6794.8,
+          "preferred_pnl": -11508.08,
+          "preferred_fair": 65.3,
+          "preferred_extrapolated": false,
+          "net_pnl": -4713.28
         },
         {
           "shock_pct": -40,
-          "option_pnl": 4531.78,
-          "pnl": 4531.78
+          "pnl": -3961.09,
+          "option_pnl": 4779.01,
+          "preferred_pnl": -8740.1,
+          "preferred_fair": 72.64,
+          "preferred_extrapolated": false,
+          "net_pnl": -3961.09
         },
         {
           "shock_pct": -30,
-          "option_pnl": 3029.89,
-          "pnl": 3029.89
+          "pnl": -3057.99,
+          "option_pnl": 3176.12,
+          "preferred_pnl": -6234.11,
+          "preferred_fair": 79.29,
+          "preferred_extrapolated": false,
+          "net_pnl": -3057.99
         },
         {
           "shock_pct": -20,
-          "option_pnl": 1827.78,
-          "pnl": 1827.78
+          "pnl": -2049.05,
+          "option_pnl": 1889.85,
+          "preferred_pnl": -3938.9,
+          "preferred_fair": 85.38,
+          "preferred_extrapolated": false,
+          "net_pnl": -2049.05
         },
         {
           "shock_pct": -10,
-          "option_pnl": 836.43,
-          "pnl": 836.43
+          "pnl": -1128.9,
+          "option_pnl": 836.51,
+          "preferred_pnl": -1965.41,
+          "preferred_fair": 90.61,
+          "preferred_extrapolated": false,
+          "net_pnl": -1128.9
         },
         {
           "shock_pct": 0,
+          "pnl": 0.0,
           "option_pnl": 0.0,
-          "pnl": 0.0
+          "preferred_pnl": 0.0,
+          "preferred_fair": 95.83,
+          "preferred_extrapolated": false,
+          "net_pnl": 0.0
         },
         {
           "shock_pct": 10,
-          "option_pnl": -637.86,
-          "pnl": -637.86
+          "pnl": 894.47,
+          "option_pnl": -678.85,
+          "preferred_pnl": 1573.32,
+          "preferred_fair": 100.0,
+          "preferred_extrapolated": false,
+          "net_pnl": 894.47
         },
         {
           "shock_pct": 20,
-          "option_pnl": -1218.75,
-          "pnl": -1218.75
+          "pnl": 1888.1,
+          "option_pnl": -1273.4,
+          "preferred_pnl": 3161.5,
+          "preferred_fair": 104.21,
+          "preferred_extrapolated": false,
+          "net_pnl": 1888.1
         },
         {
           "shock_pct": 30,
-          "option_pnl": -1659.57,
-          "pnl": -1659.57
+          "pnl": 2846.8,
+          "option_pnl": -1716.94,
+          "preferred_pnl": 4563.74,
+          "preferred_fair": 107.93,
+          "preferred_extrapolated": false,
+          "net_pnl": 2846.8
         },
         {
           "shock_pct": 40,
-          "option_pnl": -2077.09,
-          "pnl": -2077.09
+          "pnl": 3759.22,
+          "option_pnl": -2130.62,
+          "preferred_pnl": 5889.84,
+          "preferred_fair": 111.45,
+          "preferred_extrapolated": false,
+          "net_pnl": 3759.22
         },
         {
           "shock_pct": 50,
-          "option_pnl": -2383.38,
-          "pnl": -2383.38
+          "pnl": 4687.58,
+          "option_pnl": -2437.83,
+          "preferred_pnl": 7125.41,
+          "preferred_fair": 114.72,
+          "preferred_extrapolated": false,
+          "net_pnl": 4687.58
+        },
+        {
+          "shock_pct": 60,
+          "pnl": 5490.99,
+          "option_pnl": -2719.58,
+          "preferred_pnl": 8210.57,
+          "preferred_fair": 117.6,
+          "preferred_extrapolated": false,
+          "net_pnl": 5490.99
+        },
+        {
+          "shock_pct": 70,
+          "pnl": 6344.08,
+          "option_pnl": -2951.64,
+          "preferred_pnl": 9295.72,
+          "preferred_fair": 120.48,
+          "preferred_extrapolated": false,
+          "net_pnl": 6344.08
+        },
+        {
+          "shock_pct": 80,
+          "pnl": 7240.43,
+          "option_pnl": -3140.45,
+          "preferred_pnl": 10380.88,
+          "preferred_fair": 123.36,
+          "preferred_extrapolated": true,
+          "net_pnl": 7240.43
+        },
+        {
+          "shock_pct": 90,
+          "pnl": 8148.07,
+          "option_pnl": -3317.96,
+          "preferred_pnl": 11466.03,
+          "preferred_fair": 126.23,
+          "preferred_extrapolated": true,
+          "net_pnl": 8148.07
+        },
+        {
+          "shock_pct": 100,
+          "pnl": 9097.27,
+          "option_pnl": -3453.91,
+          "preferred_pnl": 12551.18,
+          "preferred_fair": 129.11,
+          "preferred_extrapolated": true,
+          "net_pnl": 9097.27
         }
       ],
       "ladder": [
@@ -1875,7 +2400,13 @@
           "hedge_cost_after_tax": 1931.221
         }
       ],
-      "note": "Wipeout-aligned IBIT put only (nearest listed to claims/assets \u00d7 spot). Returns on $10k capital with 15% IB margin; tax benefit at marginal rate."
+      "note": "Wipeout-aligned IBIT put only (nearest listed to claims/assets \u00d7 spot). Returns on $10k capital with 15% IB margin; tax benefit at marginal rate.",
+      "scenario_grid_pct": 75.0,
+      "zero_btc_fair": {
+        "fair_value": 19.198359664672655,
+        "months_paid": 18,
+        "accumulated_unpaid_dividends": 1.5312112708922323e+17
+      }
     },
     "note": "STRC three-leg from mstr_options_hedge.ipynb; SATA IBIT long puts from ibit_options_hedge.ipynb. $10k books, after-tax hedge cost vs total yield."
   },

@@ -189,7 +189,12 @@ def _coupon_payment_times(T_mat: float) -> list[float]:
 
 
 def _log_discount_interp_segments(t: float, ts: np.ndarray, ld: np.ndarray) -> float:
-    """Log-linear discount interpolation on sorted pillars; flat extrapolation outside."""
+    """Log-linear discount interpolation on sorted pillars; flat-zero extrapolation outside.
+
+    Beyond the last pillar (DGS30), hold the longest zero constant so a cash flow
+    at 50y/100y is discounted at the same annually compounded rate as the 30y
+    point — not the steeper/shallower forward implied by the last segment.
+    """
     if ts.size == 0:
         return 0.0
     if t <= float(ts[0]):
@@ -197,10 +202,8 @@ def _log_discount_interp_segments(t: float, ts: np.ndarray, ld: np.ndarray) -> f
             return float(ld[0])
         return float(ld[0] * (t / float(ts[0])))
     if t >= float(ts[-1]):
-        if ts.size == 1:
-            return float(ld[0])
-        slope = (float(ld[-1]) - float(ld[-2])) / (float(ts[-1]) - float(ts[-2]))
-        return float(ld[-1] + slope * (t - float(ts[-1])))
+        # Flat continuous zero: D(T) = D(T_last)^(T/T_last).
+        return float(ld[-1] * (t / float(ts[-1])))
     i = int(np.searchsorted(ts, t, side="right"))
     t0, t1 = float(ts[i - 1]), float(ts[i])
     w = (t - t0) / (t1 - t0)

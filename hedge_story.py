@@ -169,7 +169,7 @@ def _sata_put_shock_pnl(
         return []
 
     series = []
-    for p in hh.SHOCK_PCTS:
+    for p in hh.SHOCK_PCTS_WIDE:
         h = p / 100.0
         S1 = spot * (1 + h)
         r1 = r * (1 + h)
@@ -189,10 +189,16 @@ def _sata_put_shock_pnl(
     return series
 
 
-def _interp_fair_at_shock(
-    scenarios: list[dict[str, Any]], shock_pct: float
-) -> float | None:
-    """Linear interp of model fair vs BTC start shock (shock_pct like -50 for −50%)."""
+def _scenario_fair_points(
+    scenarios: list[dict[str, Any]],
+    zero_btc_fair: float | None = None,
+) -> list[tuple[float, float]]:
+    """(shock %, model fair) points from the MC scenario curve, sorted by shock.
+
+    `zero_btc_fair` adds the −100% end point: Bitcoin at zero is not a scenario
+    the grid covers, but it is exactly computable — cash pays the coupon until it
+    runs out — so it anchors the curve instead of being extrapolated into.
+    """
     pts: list[tuple[float, float]] = []
     for r in scenarios:
         p = r.get("btc_start_pct")
@@ -206,20 +212,46 @@ def _interp_fair_at_shock(
             pts.append((x, float(f)))
         except (TypeError, ValueError):
             continue
+    if zero_btc_fair is not None and not any(x <= -100.0 for x, _ in pts):
+        pts.append((-100.0, float(zero_btc_fair)))
+    pts.sort(key=lambda t: t[0])
+    return pts
+
+
+def _interp_fair_at_shock(
+    scenarios: list[dict[str, Any]],
+    shock_pct: float,
+    zero_btc_fair: float | None = None,
+) -> tuple[float, bool] | None:
+    """Model fair at a BTC start shock (−50 for −50%), plus whether it is extrapolated.
+
+    The scenario grid stops at ±75%; the stress chart runs to ±100%. The −100%
+    end is anchored by `zero_btc_fair` when it is known. Anywhere else outside
+    the grid, extend the slope of the two outermost points (floored at zero)
+    rather than holding the endpoint flat — a flat tail would say another 25%
+    down costs SATA holders nothing.
+    """
+    pts = _scenario_fair_points(scenarios, zero_btc_fair)
     if len(pts) < 2:
         return None
-    pts.sort(key=lambda t: t[0])
-    if shock_pct <= pts[0][0]:
-        return pts[0][1]
-    if shock_pct >= pts[-1][0]:
-        return pts[-1][1]
-    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
-        if x0 <= shock_pct <= x1:
-            if abs(x1 - x0) < 1e-12:
-                return y0
-            t = (shock_pct - x0) / (x1 - x0)
-            return y0 + t * (y1 - y0)
-    return None
+    if shock_pct < pts[0][0]:
+        (x0, y0), (x1, y1) = pts[0], pts[1]
+    elif shock_pct > pts[-1][0]:
+        (x0, y0), (x1, y1) = pts[-2], pts[-1]
+    else:
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            if x0 <= shock_pct <= x1:
+                break
+        else:
+            return None
+        if abs(x1 - x0) < 1e-12:
+            return y0, False
+        t = (shock_pct - x0) / (x1 - x0)
+        return y0 + t * (y1 - y0), False
+    if abs(x1 - x0) < 1e-12:
+        return y0, True
+    slope = (y1 - y0) / (x1 - x0)
+    return max(0.0, y0 + slope * (shock_pct - x0)), True
 
 
 def _enrich_pnl_with_preferred(
@@ -227,18 +259,21 @@ def _enrich_pnl_with_preferred(
     *,
     scenarios: list[dict[str, Any]],
     num_shares: float,
+    zero_btc_fair: float | None = None,
 ) -> list[dict[str, Any]]:
     """Add SATA fair Δ (from MC scenario curve) and net book P&L next to option P&L."""
     if not pnl_series or not scenarios or not (num_shares > 0):
         return pnl_series
-    fair0 = _interp_fair_at_shock(scenarios, 0.0)
-    if fair0 is None:
+    base = _interp_fair_at_shock(scenarios, 0.0, zero_btc_fair)
+    if base is None:
         return pnl_series
+    fair0 = base[0]
     out = []
     for row in pnl_series:
         shock = float(row.get("shock_pct") or 0)
         option = float(row.get("option_pnl") if row.get("option_pnl") is not None else row.get("pnl") or 0)
-        fair_s = _interp_fair_at_shock(scenarios, shock)
+        hit = _interp_fair_at_shock(scenarios, shock, zero_btc_fair)
+        fair_s, extrapolated = hit if hit is not None else (None, False)
         preferred = (
             (fair_s - fair0) * num_shares if fair_s is not None else None
         )
@@ -249,6 +284,7 @@ def _enrich_pnl_with_preferred(
                 "option_pnl": round(option, 2),
                 "preferred_pnl": round(preferred, 2) if preferred is not None else None,
                 "preferred_fair": round(fair_s, 2) if fair_s is not None else None,
+                "preferred_extrapolated": bool(extrapolated) if fair_s is not None else None,
                 "pnl": round(net, 2),
                 "net_pnl": round(net, 2),
             }
@@ -527,6 +563,8 @@ def build_sata_ibit_hedge(
     near_optimal = None
     book = None
     pnl_series: list[dict[str, Any]] = []
+    scenario_grid_pct: float | None = None
+    zero_btc: dict[str, Any] | None = None
     if optimal is not None and not hedge_calc.empty:
         hedge_calc = hedge_calc.copy()
         hedge_calc["dist"] = (hedge_calc["strike"] - optimal).abs()
@@ -562,7 +600,8 @@ def build_sata_ibit_hedge(
         near_frame = hedge_calc.loc[[near_idx]].copy()
         try:
             pnl = hh.compute_pnl_sensitivity(
-                near_frame, ibit_spot, last, ibit_data
+                near_frame, ibit_spot, last, ibit_data,
+                shock_pcts=hh.SHOCK_PCTS_WIDE,
             )
             pnl_series = _pnl_series(pnl)
             # Attach option_pnl alias for the chart.
@@ -617,11 +656,25 @@ def build_sata_ibit_hedge(
             except Exception:
                 scen = []
         if pnl_series and scen and near_optimal.get("num_shares"):
+            # Bitcoin at zero is the one point past the grid we can compute
+            # exactly (cash pays the coupon until it is gone), so anchor the
+            # −100% end rather than extrapolating into it.
+            try:
+                from sata_valuation import zero_btc_fair_value_per_share
+
+                zero_btc = zero_btc_fair_value_per_share(str(output_dir))
+            except Exception:
+                zero_btc = None
+            zero_fair = zero_btc.get("fair_value") if zero_btc else None
             pnl_series = _enrich_pnl_with_preferred(
                 pnl_series,
                 scenarios=scen,
                 num_shares=float(near_optimal["num_shares"]),
+                zero_btc_fair=zero_fair,
             )
+            grid = _scenario_fair_points(scen)
+            if grid:
+                scenario_grid_pct = min(abs(grid[0][0]), abs(grid[-1][0]))
 
     ladder = _row_records(
         hedge_calc.sort_values("strike"),
@@ -653,6 +706,8 @@ def build_sata_ibit_hedge(
         "near_optimal": near_optimal,
         "book": book,
         "pnl_series": pnl_series,
+        "scenario_grid_pct": scenario_grid_pct,
+        "zero_btc_fair": zero_btc,
         "ladder": ladder,
         "note": (
             "Wipeout-aligned IBIT put only (nearest listed to claims/assets × spot). "

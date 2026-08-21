@@ -911,6 +911,75 @@ def simulate_single_dividend_path(initial_cash_reserve: float, initial_bitcoin_h
 
     return months_paid, bitcoin_holdings, cash_reserve, accumulated_unpaid_dividends, cash_flows
 
+def zero_btc_fair_value_per_share(data_dir: Optional[str] = None) -> Optional[Dict[str, float]]:
+    """Model fair value per SATA share with Bitcoin at zero — an exact, cheap answer.
+
+    Every Monte Carlo path multiplies through a zero start, so all 10,000 paths
+    collapse to one deterministic run: cash pays the coupon until it is gone,
+    Bitcoin can never be sold because its mark is zero. No price-path file and no
+    simulation fleet needed — one path over the same discount factors the full
+    engine uses. This anchors the −100% end of the stress curve, where the ±75%
+    scenario grid has nothing to say.
+    """
+    try:
+        strive_data = load_btcc_data(data_dir)
+        config = Configuration(data_dir=data_dir, **strive_data)
+    except Exception:
+        return None
+
+    total_months = 1200
+    try:
+        # Metadata only (a few KB) — never touch the ~1GB price-path array.
+        meta_path = Path(data_dir or DEFAULT_OUTPUT_DIR) / 'btc_price_paths_scenarios_metadata.npz'
+        if meta_path.is_file():
+            with np.load(meta_path, allow_pickle=True) as meta:
+                total_months = int(meta['total_months'])
+    except Exception:
+        pass
+
+    config_dict = config.to_dict()
+    config_dict['total_months'] = total_months
+    config_dict['enable_early_termination'] = True
+
+    try:
+        from preferred_valuation import live_yield_curve, monthly_discount_factors_from_curve
+
+        curve = live_yield_curve(data_dir)
+        discount_factors = (
+            monthly_discount_factors_from_curve(curve, total_months)
+            if curve is not None
+            else None
+        )
+    except Exception:
+        discount_factors = None
+    if discount_factors is None:
+        discount_factors = np.power(
+            1 + config.monthly_discount_rate, np.arange(1, total_months + 1)
+        )
+    discount_factors = np.asarray(discount_factors, dtype=np.float64)
+
+    try:
+        months_paid, _final_btc, _final_cash, unpaid, cash_flows = simulate_single_dividend_path(
+            config.initial_cash_reserve,
+            config.initial_bitcoin_holdings,
+            np.zeros(total_months, dtype=np.float64),
+            config_dict,
+            threshold_multiplier=config_dict.get('dividend_suspension_threshold_multiplier'),
+            enable_early_termination=True,
+        )
+        npv = calculate_npv_matrix_multiplication(cash_flows, discount_factors)
+    except Exception:
+        return None
+    if not np.isfinite(npv) or not (config.sata_shares_outstanding > 0):
+        return None
+
+    return {
+        'fair_value': float(npv) / float(config.sata_shares_outstanding),
+        'months_paid': int(months_paid),
+        'accumulated_unpaid_dividends': float(unpaid),
+    }
+
+
 def simulate_unified_worker(args: Tuple[str, Any, np.ndarray, Dict[str, Any]]) -> Any:
     """Unified worker function for all simulation types - eliminates massive code duplication."""
     worker_type, worker_param, price_paths, config = args

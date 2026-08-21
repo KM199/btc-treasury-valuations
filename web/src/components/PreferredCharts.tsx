@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -222,6 +223,7 @@ export function DensityHistogramChart({
 export function FairVsBtcChart({
   scenarios,
   highlightBtc,
+  capLevel = 100,
 }: {
   scenarios: Array<{
     btc_start?: number | null;
@@ -229,6 +231,7 @@ export function FairVsBtcChart({
     fair_value?: number | null;
   }>;
   highlightBtc?: number | null;
+  capLevel?: number | null;
 }) {
   const data = scenarios
     .filter((s) => s.fair_value != null && s.btc_start != null)
@@ -248,6 +251,26 @@ export function FairVsBtcChart({
   }
 
   const baseline = data.find((d) => d.btcStartPct === 0);
+
+  // Model NPV keeps climbing with Bitcoin; the traded price does not. Above the
+  // $100 stated amount the issuer can sell shares at the market into the
+  // premium and step the coupon down, both of which pull the quote back to par
+  // — so the tradeable price flattens where the curve crosses the ceiling.
+  // Find that crossing and run a dotted line from there to the right edge.
+  const cap = capLevel != null && Number.isFinite(capLevel) ? capLevel : null;
+  const maxBtc = data[data.length - 1].btcPrice;
+  let capStartBtc: number | null = null;
+  if (cap != null && data.some((d) => d.fair > cap)) {
+    capStartBtc = data[0].fair >= cap ? data[0].btcPrice : null;
+    for (let i = 1; capStartBtc == null && i < data.length; i += 1) {
+      const prev = data[i - 1];
+      const cur = data[i];
+      if (prev.fair < cap && cur.fair >= cap) {
+        const t = (cap - prev.fair) / (cur.fair - prev.fair);
+        capStartBtc = prev.btcPrice + t * (cur.btcPrice - prev.btcPrice);
+      }
+    }
+  }
 
   return (
     <div className="h-64 w-full md:h-72">
@@ -277,6 +300,36 @@ export function FairVsBtcChart({
               strokeDasharray="4 4"
             />
           ) : null}
+          {cap != null && capStartBtc != null ? (
+            <ReferenceLine
+              segment={[
+                { x: capStartBtc, y: cap },
+                { x: maxBtc, y: cap },
+              ]}
+              stroke="#c1cdde"
+              strokeWidth={1.75}
+              strokeDasharray="1 5"
+              strokeLinecap="round"
+              ifOverflow="extendDomain"
+              label={{
+                value: `Traded ceiling \u2248 $${cap}`,
+                fill: "#c1cdde",
+                fontSize: 11,
+                position: "insideBottomRight",
+              }}
+            />
+          ) : null}
+          {cap != null && capStartBtc != null ? (
+            <ReferenceDot
+              x={capStartBtc}
+              y={cap}
+              r={3.5}
+              fill="#c1cdde"
+              stroke="#0c1018"
+              strokeWidth={1}
+              isFront
+            />
+          ) : null}
           {highlightBtc != null ? (
             <ReferenceLine x={highlightBtc} stroke="#7dcea0" strokeWidth={1.5} />
           ) : null}
@@ -300,6 +353,11 @@ export function FairVsBtcChart({
                     <span className="text-mist-500"> · {pct}</span>
                   </p>
                   <p className="mt-1 text-ember-400">Fair {formatUsd(row.fair)}</p>
+                  {cap != null && row.fair > cap ? (
+                    <p className="mt-1 text-[11px] text-mist-500">
+                      Model only — above the ${cap} ceiling
+                    </p>
+                  ) : null}
                 </div>
               );
             }}
@@ -378,6 +436,132 @@ export function SensitivityLineChart({
             strokeWidth={2}
             dot={{ r: 3, fill: "#e8893a" }}
             isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function formatTenorYears(years: number): string {
+  if (years < 1) {
+    const months = Math.round(years * 12);
+    return `${months}m`;
+  }
+  if (Number.isInteger(years) || Math.abs(years - Math.round(years)) < 1e-9) {
+    return `${Math.round(years)}y`;
+  }
+  return `${years.toFixed(1)}y`;
+}
+
+export function YieldCurveChart({
+  curve,
+}: {
+  curve: {
+    as_of_date?: string | null;
+    flat_after_years?: number;
+    reference_zero_annual?: number | null;
+    pillars?: Array<{ years: number; zero_annual: number }>;
+    curve: Array<{ years: number; zero_annual: number; is_pillar?: boolean }>;
+  };
+}) {
+  const data = (curve.curve ?? []).map((p) => ({
+    years: p.years,
+    zeroPct: p.zero_annual * 100,
+    isPillar: Boolean(p.is_pillar),
+  }));
+
+  if (data.length < 2) {
+    return <p className="text-sm text-mist-500">No yield curve.</p>;
+  }
+
+  const flatAfter = curve.flat_after_years ?? 30;
+  const refPct =
+    curve.reference_zero_annual != null
+      ? curve.reference_zero_annual * 100
+      : null;
+  const maxYears = data[data.length - 1]?.years ?? 40;
+  const xTicks = [1 / 12, 1, 2, 5, 10, 20, 30, 40].filter(
+    (t) => t <= maxYears + 1e-9
+  );
+  const yVals = data.map((d) => d.zeroPct);
+  const yMin = Math.floor(Math.min(...yVals) * 10) / 10 - 0.1;
+  const yMax = Math.ceil(Math.max(...yVals) * 10) / 10 + 0.1;
+
+  return (
+    <div className="h-56 w-full md:h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 12, right: 16, left: 4, bottom: 8 }}>
+          <CartesianGrid stroke="rgba(232,238,248,0.06)" strokeDasharray="3 3" />
+          <XAxis
+            type="number"
+            dataKey="years"
+            domain={["dataMin", "dataMax"]}
+            ticks={xTicks}
+            tick={{ fill: "#9aabc4", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v: number) => formatTenorYears(v)}
+          />
+          <YAxis
+            domain={[yMin, yMax]}
+            tick={{ fill: "#9aabc4", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v: number) => `${v.toFixed(1)}%`}
+            width={48}
+          />
+          <ReferenceLine
+            x={flatAfter}
+            stroke="rgba(125,206,160,0.45)"
+            strokeDasharray="4 4"
+            label={{
+              value: "flat →",
+              fill: "#7dcea0",
+              fontSize: 11,
+              position: "insideTopLeft",
+            }}
+          />
+          {refPct != null ? (
+            <ReferenceLine
+              y={refPct}
+              stroke="rgba(232,137,58,0.35)"
+              strokeDasharray="3 3"
+            />
+          ) : null}
+          <Tooltip
+            contentStyle={tipStyle}
+            formatter={(v: number) => [`${v.toFixed(2)}%`, "Zero"]}
+            labelFormatter={(v) => formatTenorYears(Number(v))}
+          />
+          <Line
+            type="monotone"
+            dataKey="zeroPct"
+            stroke="#7dcea0"
+            strokeWidth={2}
+            dot={(props: {
+              cx?: number;
+              cy?: number;
+              payload?: { isPillar?: boolean };
+            }) => {
+              const { cx, cy, payload } = props;
+              if (cx == null || cy == null || !payload?.isPillar) {
+                return <g key={`empty-${cx ?? 0}-${cy ?? 0}`} />;
+              }
+              return (
+                <circle
+                  key={`pillar-${cx}-${cy}`}
+                  cx={cx}
+                  cy={cy}
+                  r={3.5}
+                  fill="#e8893a"
+                  stroke="#121826"
+                  strokeWidth={1}
+                />
+              );
+            }}
+            isAnimationActive={false}
+            name="Zero rate"
           />
         </LineChart>
       </ResponsiveContainer>
@@ -715,6 +899,8 @@ export function HedgePnlChart({
   }>;
 }) {
   if (!series.length) return null;
+  const span = Math.max(...series.map((r) => Math.abs(r.shock_pct)));
+  const bound = Math.ceil(span / 25) * 25;
   const hasPreferred = series.some(
     (r) => r.preferred_pnl != null && Number.isFinite(r.preferred_pnl)
   );
@@ -727,10 +913,14 @@ export function HedgePnlChart({
   return (
     <div className="h-64 w-full md:h-72">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 8 }}>
+        <LineChart data={data} margin={{ top: 8, right: 22, left: 4, bottom: 8 }}>
           <CartesianGrid stroke="rgba(232,238,248,0.06)" strokeDasharray="3 3" />
           <XAxis
             dataKey="shock_pct"
+            type="number"
+            domain={[-bound, bound]}
+            ticks={[-bound, -bound / 2, 0, bound / 2, bound]}
+            interval={0}
             tick={{ fill: "#9aabc4", fontSize: 11 }}
             axisLine={false}
             tickLine={false}

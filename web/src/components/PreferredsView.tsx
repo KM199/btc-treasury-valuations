@@ -7,6 +7,7 @@ import {
   MarketSnapshot,
   PreferredIssuerStory,
   PreferredStory,
+  YieldCurveChart as YieldCurveChartData,
   formatCompact,
   formatTime,
   formatUsd,
@@ -18,6 +19,7 @@ import {
   FairVsBtcChart,
   HedgePnlChart,
   SensitivityLineChart,
+  YieldCurveChart,
 } from "@/components/PreferredCharts";
 import { fairFor } from "@/lib/rnav";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -155,10 +157,12 @@ export function PreferredsView({
   initialMarket,
   initialFair,
   story,
+  yieldCurve,
 }: {
   initialMarket: MarketSnapshot;
   initialFair: FairValues;
   story: PreferredStory;
+  yieldCurve?: YieldCurveChartData | null;
 }) {
   const { asOf, instruments, live, error, btc } = useLiveQuotes(initialMarket);
 
@@ -199,6 +203,8 @@ export function PreferredsView({
 
   const threshRows = ready?.threshold_sensitivity || [];
   const divRows = ready?.dividend_rate_sensitivity || [];
+
+  const sataPar = Number(cfg.sata_par_value ?? 100);
 
   const baselineThresh = Number(cfg.dividend_suspension_threshold_multiplier ?? 1);
   const baselineDiv = Number(cfg.annual_dividend_rate ?? cfg.sata_annual_dividend_rate ?? 0.13);
@@ -419,6 +425,28 @@ export function PreferredsView({
                 be sold into the same stress that closes the gate.
               </p>
             </div>
+            {yieldCurve && yieldCurve.curve?.length ? (
+              <div className="mt-8">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="font-display text-lg text-mist-100">
+                    Treasury zero curve
+                  </h3>
+                  {yieldCurve.as_of_date ? (
+                    <p className="font-mono text-xs text-mist-500">
+                      as-of {yieldCurve.as_of_date}
+                    </p>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm text-mist-500">
+                  Annually compounded zeros from the FRED bootstrap — same
+                  curve the Monte Carlo uses for NPV. Ember dots are published
+                  tenors; past 30y the zero is held flat.
+                </p>
+                <div className="mt-4">
+                  <YieldCurveChart curve={yieldCurve} />
+                </div>
+              </div>
+            ) : null}
           </>
         ) : (
           <p className="mt-6 text-sm text-mist-500">
@@ -687,7 +715,35 @@ export function PreferredsView({
           <div className="border border-white/8 bg-ink-900/60 p-5">
             <h3 className="font-display text-lg text-mist-100">SATA</h3>
             <div className="mt-4">
-              <FairVsBtcChart scenarios={scenarios} highlightBtc={activeBtc} />
+              <FairVsBtcChart
+                scenarios={scenarios}
+                highlightBtc={activeBtc}
+                capLevel={Number.isFinite(sataPar) ? sataPar : 100}
+              />
+            </div>
+            <div className="mt-5 space-y-3 text-sm text-mist-400">
+              <p>
+                <span className="text-mist-200">
+                  The dotted line is the ceiling.
+                </span>{" "}
+                The orange curve is model NPV, not a price anyone can pay. SATA
+                is a {formatUsd(sataPar, 0)} stated-amount perpetual, so once
+                NPV clears that level the issuer&apos;s own tools take over: it
+                can sell shares at the market into the premium and step the
+                monthly rate down, and both pull the quote back toward par. Fair
+                value keeps climbing with Bitcoin; the price it can actually
+                print flattens.
+              </p>
+              <p>
+                Time above the line is a management decision, not a level the
+                structure supports. Management has said it is willing to let the
+                preferred trade above {formatUsd(sataPar, 0)} instead of
+                defending the band on schedule — a sustained premium is
+                expensive for anyone short it as a capped instrument, and
+                holding the premium open squeezes them. It is a choice to stop
+                selling, and it is reversible, so read anything above the dotted
+                line as temporary.
+              </p>
             </div>
             {btcStarts.length > 1 ? (
               <label className="mt-6 block">
@@ -968,6 +1024,24 @@ export function PreferredsView({
                     <span className="text-[#c4a574]">SATA fair Δ</span> (scenario
                     curve × shares) ·{" "}
                     <span className="text-ember-400">net book</span>.
+                  </p>
+                  <p className="mt-2 font-mono text-[11px] text-mist-600">
+                    {sataIbit.zero_btc_fair?.fair_value != null ? (
+                      <>
+                        −100% is the model&rsquo;s Bitcoin-at-zero value (
+                        {formatUsd(sataIbit.zero_btc_fair.fair_value, 2)}
+                        {sataIbit.zero_btc_fair.months_paid != null
+                          ? ` — cash alone still funds ${sataIbit.zero_btc_fair.months_paid} months of coupon`
+                          : ""}
+                        ).{" "}
+                      </>
+                    ) : null}
+                    {sataIbit.scenario_grid_pct != null &&
+                    sataIbit.pnl_series.some(
+                      (r) => r.preferred_extrapolated === true
+                    )
+                      ? `Past +${Math.round(sataIbit.scenario_grid_pct)}% the scenario grid runs out and the SATA leg is extended at its slope.`
+                      : null}
                   </p>
                 </div>
               ) : (

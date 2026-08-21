@@ -109,6 +109,82 @@ def monthly_discount_factors_from_curve(curve: Any, total_months: int):
     return factors
 
 
+def _annual_zero_from_discount(T: float, discount: float) -> float | None:
+    """Annually compounded zero implied by discount factor D(T)."""
+    if T <= 0 or not math.isfinite(discount) or discount <= 0:
+        return None
+    return float(discount ** (-1.0 / T) - 1.0)
+
+
+def build_yield_curve_chart_payload(
+    output_dir: str | Path = OUTPUT_DIR,
+    *,
+    max_years: float = 40.0,
+) -> dict[str, Any] | None:
+    """Site-ready Treasury zero curve for the Preferreds discount chart.
+
+    Samples the same interpolated/extrapolated zeros the valuation uses
+    (monthly tenors through ``max_years``), plus the FRED bootstrap pillars.
+    Returns None if no curve is available.
+    """
+    curve = live_yield_curve(output_dir)
+    if curve is None:
+        return None
+
+    pillars: list[dict[str, Any]] = []
+    for T, ld in zip(curve.pillar_times, curve.log_discounts):
+        d = math.exp(ld)
+        z = _annual_zero_from_discount(float(T), d)
+        if z is None:
+            continue
+        pillars.append(
+            {
+                "years": float(T),
+                "zero_annual": z,
+                "discount": float(d),
+            }
+        )
+
+    curve_pts: list[dict[str, Any]] = []
+    n_months = int(round(max_years * 12))
+    pillar_years = {round(float(T), 10) for T in curve.pillar_times}
+    for m in range(1, n_months + 1):
+        T = m / 12.0
+        d = float(curve.discount(T))
+        z = _annual_zero_from_discount(T, d)
+        if z is None:
+            continue
+        # Mark points that land on a FRED pillar (monthly grid hits 1m/3m/6m/…).
+        is_pillar = round(T, 10) in pillar_years
+        curve_pts.append(
+            {
+                "years": T,
+                "zero_annual": z,
+                "is_pillar": is_pillar,
+            }
+        )
+
+    ref_T = float(DISCOUNT_RATE_TENOR_YEARS)
+    ref_d = float(curve.discount(ref_T))
+    ref_z = _annual_zero_from_discount(ref_T, ref_d)
+
+    return {
+        "as_of_date": getattr(curve, "as_of_date", None),
+        "source": getattr(curve, "source", None)
+        or "FRED DGS* (fredgraph.csv) + semiannual par bootstrap",
+        "flat_after_years": DISCOUNT_RATE_TENOR_YEARS,
+        "reference_zero_annual": ref_z,
+        "max_years": max_years,
+        "pillars": pillars,
+        "curve": curve_pts,
+        "note": (
+            "Annually compounded zeros from log-linear discount-factor "
+            "interpolation between FRED pillars; flat zero beyond the "
+            f"{DISCOUNT_RATE_TENOR_YEARS:.0f}y tenor."
+        ),
+    }
+
+
 @dataclass
 class PreferredIssuerConfig:
     """Issuer parameters for a Bitcoin-treasury preferred."""
