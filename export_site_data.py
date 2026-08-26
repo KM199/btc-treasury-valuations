@@ -40,6 +40,58 @@ SITE_DATA_DIR = PROJECT_ROOT / "web" / "public" / "data"
 TICKERS = ("MSTR", "STRC", "ASST", "SATA")
 
 
+def _load_mstr_site_inputs(output_dir: Path) -> tuple[dict[str, Any], dict[str, Any], bool]:
+    """Load MSTR enriched + hedge JSON, filling from committed fallback if empty.
+
+    Returns (enriched, hedge, used_fallback).
+    """
+    from fetch_mstr_treasury import (
+        load_mstr_treasury_fallback,
+        mstr_treasury_is_usable,
+    )
+
+    mstr_enriched = _load_json(output_dir / "mstr_enriched_data.json") or {}
+    mstr_hedge = _load_json(output_dir / "mstr_treasury_extracted_data.json") or {}
+    probe = dict(mstr_enriched)
+    probe["bitcoin_holdings"] = (
+        probe.get("bitcoin_holdings")
+        or mstr_hedge.get("btc_holdings")
+        or mstr_hedge.get("bitcoin_holdings")
+    )
+    probe["strc_shares"] = probe.get("strc_shares") or mstr_hedge.get("strc_shares")
+    if mstr_treasury_is_usable(probe):
+        return mstr_enriched, mstr_hedge, bool(mstr_enriched.get("_from_fallback"))
+
+    fb = load_mstr_treasury_fallback()
+    if not fb:
+        return mstr_enriched, mstr_hedge, False
+
+    print(
+        "  ⚠ Live MSTR treasury files are empty; "
+        "using committed mstr_treasury_fallback.json"
+    )
+    live_prices = {
+        key: value
+        for key, value in mstr_enriched.items()
+        if key.endswith("_price") or key in {"mstr_shares", "btc_price", "stre_fx_rate"}
+    }
+    mstr_enriched = {**mstr_enriched, **fb, **live_prices}
+    holdings = fb.get("bitcoin_holdings") or fb.get("btc_holdings")
+    mstr_hedge = {
+        **mstr_hedge,
+        **fb,
+        "btc_holdings": holdings,
+        "usd_reserve_usd": fb.get("usd_reserve_usd") or fb.get("cash"),
+        "convertible_debt_principal": fb.get("total_convertible_debt_principal")
+        or mstr_hedge.get("convertible_debt_principal"),
+        "convertible_debt_market_value": fb.get("total_convertible_debt_market_value")
+        or mstr_hedge.get("convertible_debt_market_value"),
+        "strc_shares": fb.get("strc_shares") or mstr_hedge.get("strc_shares"),
+        "strf_shares": fb.get("strf_shares") or mstr_hedge.get("strf_shares"),
+    }
+    return mstr_enriched, mstr_hedge, True
+
+
 def _load_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
@@ -75,8 +127,7 @@ def build_market_snapshot(
 ) -> dict[str, Any]:
     """Assemble market + treasury snapshot; equity/preferred prices from Yahoo."""
     asst = _load_json(output_dir / "treasury_extracted_data.json") or {}
-    mstr_enriched = _load_json(output_dir / "mstr_enriched_data.json") or {}
-    mstr_hedge = _load_json(output_dir / "mstr_treasury_extracted_data.json") or {}
+    mstr_enriched, mstr_hedge, mstr_from_fallback = _load_mstr_site_inputs(output_dir)
 
     btc_price = load_btc_spot(output_dir, force_refresh=force_refresh, log=False)
     # Prefer Yahoo BTC over stale historical JSON when refreshing for the site
@@ -306,6 +357,35 @@ def build_market_snapshot(
             row["fair_label"] = "rNAV"
         instruments.append(row)
 
+    notes = {
+        "debt_valuation": (
+            "Convertible debt senior claims default to market value "
+            "(last traded price × notional), not face."
+        ),
+        "mstr_fair_value": (
+            "MSTR model fair = rNAV/share (BTC + cash − liquid preferreds at market "
+            "− STRE at face* − converts at market), not Strategy's mNAV multiple."
+        ),
+        "asst_fair_value": (
+            "ASST model fair = rNAV/share (BTC + cash − SATA at market − debt). "
+            "Face column marks SATA at $100 par."
+        ),
+        "stre": (
+            "STRE has no reliable Nasdaq/Yahoo mark (LuxSE, thin). "
+            "rNAV uses €100 par × FX face, shown separately with *."
+        ),
+        "freshness": (
+            "Equity/preferred/BTC spots from Yahoo on each export; "
+            "CI refreshes ~15 minutes. Browser also polls /api/quotes."
+        ),
+    }
+    if mstr_from_fallback or mstr_enriched.get("_from_fallback"):
+        notes["mstr_treasury"] = (
+            "strategy.com scrape returned no holdings (typically a 403 from "
+            "CI). BTC/cash/stack come from the last known good committed "
+            "fallback; equity and preferred prices are still live Yahoo."
+        )
+
     return {
         "as_of": datetime.now(timezone.utc).isoformat(),
         "btc_price": btc_price,
@@ -344,28 +424,7 @@ def build_market_snapshot(
             "wipeouts": asst_wipeouts,
             "sata_hedge": sata_hedge,
         },
-        "notes": {
-            "debt_valuation": (
-                "Convertible debt senior claims default to market value "
-                "(last traded price × notional), not face."
-            ),
-            "mstr_fair_value": (
-                "MSTR model fair = rNAV/share (BTC + cash − liquid preferreds at market "
-                "− STRE at face* − converts at market), not Strategy's mNAV multiple."
-            ),
-            "asst_fair_value": (
-                "ASST model fair = rNAV/share (BTC + cash − SATA at market − debt). "
-                "Face column marks SATA at $100 par."
-            ),
-            "stre": (
-                "STRE has no reliable Nasdaq/Yahoo mark (LuxSE, thin). "
-                "rNAV uses €100 par × FX face, shown separately with *."
-            ),
-            "freshness": (
-                "Equity/preferred/BTC spots from Yahoo on each export; "
-                "CI refreshes ~15 minutes. Browser also polls /api/quotes."
-            ),
-        },
+        "notes": notes,
     }
 
 
@@ -561,6 +620,7 @@ def write_site_data(
     market_path = site_dir / "market_snapshot.json"
     with market_path.open("w") as f:
         json.dump(market, f, indent=2)
+        f.write("\n")
     print(f"  ✓ Wrote {market_path}")
     for inst in market["instruments"]:
         px = inst.get("market_price")

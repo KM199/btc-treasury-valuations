@@ -42,7 +42,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/public/data/market_snapshot.json web/public/data/share_dilution.json web/public/data/yield_curve.json output/share_dilution.json output/treasury_extracted_data.json yield_curve_fallback.json || true
+          git add web/public/data/market_snapshot.json web/public/data/share_dilution.json web/public/data/yield_curve.json output/share_dilution.json output/treasury_extracted_data.json yield_curve_fallback.json mstr_treasury_fallback.json || true
           if git diff --staged --quiet; then
             echo "No market_snapshot changes"
           else

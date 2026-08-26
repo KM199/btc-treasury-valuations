@@ -8,6 +8,13 @@ export type Instrument = {
   price_source?: string;
 };
 
+/** JSON imports can be `null`; optional TS fields are only `undefined`. */
+export type JsonNum = number | null | undefined;
+
+export function readJson<T>(value: unknown): T {
+  return value as T;
+}
+
 export type StrcHedge = {
   strc_price?: number | null;
   monthly_dividend_per_share?: number | null;
@@ -42,67 +49,67 @@ export type MarketSnapshot = {
   btc_price: number;
   btc?: {
     price: number;
-    mstr_holdings?: number;
-    mstr_btc_value?: number;
-    asst_holdings?: number;
-    asst_btc_value?: number;
+    mstr_holdings?: JsonNum;
+    mstr_btc_value?: JsonNum;
+    asst_holdings?: JsonNum;
+    asst_btc_value?: JsonNum;
   };
   instruments: Instrument[];
   mstr: {
-    btc_holdings?: number;
-    usd_reserve_usd?: number;
-    convertible_debt_principal?: number;
-    convertible_debt_market_value?: number;
-    strf_market_value?: number;
-    senior_claims_market_usd?: number;
-    senior_claims_face_usd?: number;
-    strc_shares?: number;
+    btc_holdings?: JsonNum;
+    usd_reserve_usd?: JsonNum;
+    convertible_debt_principal?: JsonNum;
+    convertible_debt_market_value?: JsonNum;
+    strf_market_value?: JsonNum;
+    senior_claims_market_usd?: JsonNum;
+    senior_claims_face_usd?: JsonNum;
+    strc_shares?: JsonNum;
     source?: string;
     rnav?: {
-      rnav_per_share?: number;
-      rnav_total?: number;
-      rnav_face_total?: number;
-      rnav_market_total?: number;
-      rnav_face_per_share?: number;
-      rnav_market_per_share?: number;
-      btc_holdings?: number;
-      btc_price?: number;
-      btc_value?: number;
-      mnav_total?: number;
-      cash?: number;
-      preferred_market_cap?: number;
-      preferred_face_cap?: number;
+      rnav_per_share?: JsonNum;
+      rnav_total?: JsonNum;
+      rnav_face_total?: JsonNum;
+      rnav_market_total?: JsonNum;
+      rnav_face_per_share?: JsonNum;
+      rnav_market_per_share?: JsonNum;
+      btc_holdings?: JsonNum;
+      btc_price?: JsonNum;
+      btc_value?: JsonNum;
+      mnav_total?: JsonNum;
+      cash?: JsonNum;
+      preferred_market_cap?: JsonNum;
+      preferred_face_cap?: JsonNum;
       preferred_by_series?: Record<string, number>;
       preferred_face_by_series?: Record<string, number>;
-      preferreds_total_usd?: number;
-      preferreds_face_total_usd?: number;
-      preferreds_market_total_usd?: number;
-      stre_face_usd?: number;
-      stre_shares?: number;
+      preferreds_total_usd?: JsonNum;
+      preferreds_face_total_usd?: JsonNum;
+      preferreds_market_total_usd?: JsonNum;
+      stre_face_usd?: JsonNum;
+      stre_shares?: JsonNum;
       stre_pricing_note?: string;
-      convertible_debt?: number;
-      convertible_debt_face?: number;
-      convertible_debt_market?: number;
-      mstr_shares?: number;
-      mstr_market_cap?: number;
-      mstr_market_price?: number;
-      enterprise_value?: number;
+      convertible_debt?: JsonNum;
+      convertible_debt_face?: JsonNum;
+      convertible_debt_market?: JsonNum;
+      mstr_shares?: JsonNum;
+      mstr_market_cap?: JsonNum;
+      mstr_market_price?: JsonNum;
+      enterprise_value?: JsonNum;
       mnav_multiple?: number | null;
       mnav_description?: string;
       premium_to_rnav_pct?: number | null;
-      fair_value_per_share?: number;
+      fair_value_per_share?: JsonNum;
       description?: string;
     };
     wipeouts?: Record<string, unknown>;
     strc_hedge?: StrcHedge | null;
   };
   asst: {
-    btc_holdings?: number;
-    cash?: number;
-    sata_shares?: number;
-    sata_dividend_rate?: number;
-    debt?: number;
-    mcap?: number;
+    btc_holdings?: JsonNum;
+    cash?: JsonNum;
+    sata_shares?: JsonNum;
+    sata_dividend_rate?: JsonNum;
+    debt?: JsonNum;
+    mcap?: JsonNum;
     source?: string;
     rnav?: {
       btc_holdings?: number;

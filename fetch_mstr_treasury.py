@@ -26,10 +26,121 @@ from mstr_liquidation import (
     total_preferred_annual_dividends_usd_from_tracker,
     usd_months_dividend_coverage_from_cash,
 )
-from strc_paths import OUTPUT_DIR, ensure_output_dirs
+from strc_paths import MSTR_TREASURY_FALLBACK_PATH, OUTPUT_DIR, ensure_output_dirs
 from fetch_yahoo import cached_yahoo_history, load_btc_spot, load_json_price, yahoo_spot_price
 
 load_btc_price = load_btc_spot  # backward-compatible alias
+
+# Stable treasury fields persisted to the committed fallback. Live Yahoo
+# prices are re-fetched on every run; these are the scrape-only inputs.
+_MSTR_FALLBACK_KEYS = (
+    "bitcoin_holdings",
+    "btc_holdings",
+    "cash",
+    "usd_reserve_usd",
+    "annual_dividends",
+    "annual_dividends_musd",
+    "total_preferred_annual_dividends_usd",
+    "mstr_shares",
+    "strc_shares",
+    "strd_shares",
+    "stre_shares",
+    "strk_shares",
+    "strf_shares",
+    "strc_notional",
+    "strc_dividend_rate",
+    "strc_effective_yield",
+    "strd_notional",
+    "stre_notional",
+    "strk_notional",
+    "strf_notional",
+    "total_convertible_debt_principal",
+    "total_convertible_debt_market_value",
+    "convertible_debt",
+    "stre_fx_rate",
+    "stre_price_eur",
+    "stre_price",
+    "source",
+    "as_of_date",
+)
+
+
+def mstr_treasury_is_usable(data: dict | None) -> bool:
+    """True when a treasury dict has the holdings + STRC shares the site needs."""
+    if not data:
+        return False
+    holdings = float(data.get("bitcoin_holdings") or data.get("btc_holdings") or 0)
+    strc = float(data.get("strc_shares") or 0)
+    return holdings > 0 and strc > 0
+
+
+def load_mstr_treasury_fallback(path: Path | None = None) -> dict | None:
+    """Load the committed last-known-good Strategy treasury, or None."""
+    p = path if path is not None else MSTR_TREASURY_FALLBACK_PATH
+    if not p.is_file():
+        return None
+    try:
+        with p.open() as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) and mstr_treasury_is_usable(data) else None
+
+
+def save_mstr_treasury_fallback(data: dict, path: Path | None = None) -> None:
+    """Persist scrape-only treasury fields so CI can survive a strategy.com 403."""
+    if not mstr_treasury_is_usable(data):
+        return
+    p = path if path is not None else MSTR_TREASURY_FALLBACK_PATH
+    payload: dict = {"_fallback_saved_at": datetime.now().isoformat()}
+    for key in _MSTR_FALLBACK_KEYS:
+        if key in data and data[key] not in (None, "", [], {}):
+            payload[key] = data[key]
+    holdings = payload.get("bitcoin_holdings") or payload.get("btc_holdings")
+    if holdings:
+        payload["bitcoin_holdings"] = int(holdings)
+        payload["btc_holdings"] = int(holdings)
+    payload["source"] = data.get("source") or "https://www.strategy.com/"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("w") as f:
+        json.dump(payload, f, indent=2)
+        f.write("\n")
+
+
+def apply_mstr_treasury_fallback(live: dict, path: Path | None = None) -> dict:
+    """Fill a failed/partial strategy.com scrape from the committed fallback."""
+    fb = load_mstr_treasury_fallback(path)
+    dest = path if path is not None else MSTR_TREASURY_FALLBACK_PATH
+    if mstr_treasury_is_usable(live):
+        if fb:
+            for key, value in fb.items():
+                if str(key).startswith("_"):
+                    continue
+                if live.get(key) in (None, 0, 0.0, [], {}):
+                    live[key] = value
+        try:
+            save_mstr_treasury_fallback(live, path=dest)
+            print(f"  ✓ Updated fallback cache: {dest.name}")
+        except OSError as exc:
+            print(f"  ⚠ Could not update MSTR treasury fallback: {exc}")
+        return live
+    if not fb:
+        print(
+            "  ⚠ strategy.com treasury scrape returned no holdings "
+            f"and {dest.name} is missing"
+        )
+        return live
+    print(
+        "  ⚠ strategy.com treasury scrape returned no holdings; "
+        f"using committed fallback ({dest.name})"
+    )
+    out = dict(fb)
+    for key, value in live.items():
+        if value in (None, 0, 0.0, [], {}):
+            continue
+        out[key] = value
+    out["_from_fallback"] = True
+    return out
 
 
 def convert_issue_market_value_usd(debt: dict) -> float:
@@ -439,9 +550,8 @@ def fetch_mstr_strategy_raw(*, force_refresh: bool = False) -> dict:
             data["total_convertible_debt_market_value"] = total_debt_market
             print(f"\n  ✓ Total convertible debt principal: ${total_debt_principal:,.0f}")
             print(f"  ✓ Total convertible debt market value: ${total_debt_market:,.0f}")
-        else:
-            data["total_convertible_debt_principal"] = 0
-            data["total_convertible_debt_market_value"] = 0
+        # Do not write 0 debt on a failed /debt scrape — the committed
+        # fallback (or a previous live parse) fills those keys later.
 
         print("\nFetching share conversion data from https://www.strategy.com/shares...")
         try:
@@ -604,7 +714,9 @@ def enrich_mstr_yahoo_prices(
     print("\nFetching current prices...")
     btc_price = load_btc_spot(output_dir, force_refresh=force_refresh)
 
-    # Force fresh STRE attempt — don't trust stale stre_price from cached raw file.
+    # Prefer a live STRE mark; keep last-known prices if strategy.com 403s.
+    prev_stre_usd = data.get("stre_price")
+    prev_stre_eur = data.get("stre_price_eur")
     data.pop("stre_price", None)
     data.pop("stre_price_eur", None)
     apply_stre_price_from_strategy(data, force_refresh=force_refresh)
@@ -612,6 +724,14 @@ def enrich_mstr_yahoo_prices(
         print(
             f"  ✓ STRE price from strategy.com: €{data.get('stre_price_eur', 0):.2f} "
             f"→ ${data['stre_price']:,.2f} (fx {data.get('stre_fx_rate', 0):.4f})"
+        )
+    elif prev_stre_usd:
+        data["stre_price"] = prev_stre_usd
+        if prev_stre_eur is not None:
+            data["stre_price_eur"] = prev_stre_eur
+        print(
+            f"  ⚠ STRE price from last known treasury: "
+            f"${float(prev_stre_usd):,.2f}"
         )
 
     mstr_cached = load_json_price(output_dir / "mstr_data.json")
@@ -769,7 +889,7 @@ def load_mstr_strategy_raw(
     force_refresh: bool = False,
 ) -> dict:
     """Parse strategy.com data via the 1h HTTP cache; save result to disk."""
-    data = fetch_mstr_strategy_raw(force_refresh=force_refresh)
+    data = apply_mstr_treasury_fallback(fetch_mstr_strategy_raw(force_refresh=force_refresh))
     output_dir.mkdir(parents=True, exist_ok=True)
     raw_path = output_dir / "mstr_strategy_raw.json"
     with raw_path.open("w") as f:

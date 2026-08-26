@@ -17,6 +17,10 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 # the network path from a given environment to FRED is slow/blocked), so the
 # discount rate degrades to recent real data instead of a hardcoded constant.
 YIELD_CURVE_FALLBACK_PATH = PROJECT_ROOT / "yield_curve_fallback.json"
+# Same idea for Strategy's treasury scrape. GitHub Actions is 403'd by
+# strategy.com; without a committed fallback the site snapshot writes null
+# holdings and the Next.js production build fails type-checking.
+MSTR_TREASURY_FALLBACK_PATH = PROJECT_ROOT / "mstr_treasury_fallback.json"
 CACHE_DIR = OUTPUT_DIR / "cache"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 PLOTS_DIR = OUTPUT_DIR / "plots"

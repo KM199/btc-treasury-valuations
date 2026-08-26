@@ -4,6 +4,7 @@ import {
   MarketSnapshot,
   PreferredStory,
   YieldCurveChart,
+  readJson,
 } from "@/lib/types";
 import market from "../../../public/data/market_snapshot.json";
 import fair from "../../../public/data/fair_values.json";
@@ -19,10 +20,10 @@ export const metadata = {
 export default function PreferredsPage() {
   return (
     <PreferredsView
-      initialMarket={market as MarketSnapshot}
-      initialFair={fair as FairValues}
-      story={story as PreferredStory}
-      yieldCurve={yieldCurve as YieldCurveChart}
+      initialMarket={readJson<MarketSnapshot>(market)}
+      initialFair={readJson<FairValues>(fair)}
+      story={readJson<PreferredStory>(story)}
+      yieldCurve={readJson<YieldCurveChart>(yieldCurve)}
     />
   );
 }

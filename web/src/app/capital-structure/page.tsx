@@ -3,6 +3,7 @@ import {
   formatCompact,
   formatUsd,
   MarketSnapshot,
+  readJson,
 } from "@/lib/types";
 import marketJson from "../../../public/data/market_snapshot.json";
 
@@ -111,10 +112,10 @@ function WipeoutTable({
 }
 
 export default function CapitalStructurePage() {
-  const market = marketJson as unknown as MarketSnapshot & {
+  const market = readJson<MarketSnapshot & {
     mstr: MarketSnapshot["mstr"] & { wipeouts?: WipeoutLadder };
     asst: MarketSnapshot["asst"] & { wipeouts?: WipeoutLadder };
-  };
+  }>(marketJson);
   const mstr = market.mstr.wipeouts;
   const asst = market.asst.wipeouts;
   const band = mstr?.strc_par_band;

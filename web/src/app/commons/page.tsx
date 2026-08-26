@@ -1,5 +1,5 @@
 import { CommonsView } from "@/components/CommonsView";
-import { FairValues, MarketSnapshot, ShareDilution } from "@/lib/types";
+import { FairValues, MarketSnapshot, ShareDilution, readJson } from "@/lib/types";
 import market from "../../../public/data/market_snapshot.json";
 import fair from "../../../public/data/fair_values.json";
 import dilution from "../../../public/data/share_dilution.json";
@@ -13,9 +13,9 @@ export const metadata = {
 export default function CommonsPage() {
   return (
     <CommonsView
-      initialMarket={market as MarketSnapshot}
-      initialFair={fair as FairValues}
-      dilution={dilution as ShareDilution}
+      initialMarket={readJson<MarketSnapshot>(market)}
+      initialFair={readJson<FairValues>(fair)}
+      dilution={readJson<ShareDilution>(dilution)}
     />
   );
 }
