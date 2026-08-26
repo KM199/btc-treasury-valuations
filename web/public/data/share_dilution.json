@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-08-26T18:16:52.415052+00:00",
+  "as_of": "2026-08-26T20:38:35.431331+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -44,14 +44,14 @@
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20260826T180412Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20260826T203400Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
-    "basic_shares": 377641410,
+    "basic_shares": 415929000,
     "options_outstanding": 0,
     "rsu_psu_unvested": 0,
-    "rnav_denominator_shares": 377641410,
+    "rnav_denominator_shares": 415929000,
     "assumed_diluted_shares_incl_converts": 0,
     "convert_preferred_shares_excluded": 0,
     "breakdown": [
@@ -68,6 +68,6 @@
     ],
     "excluded_from_effective": [],
     "policy": "rNAV uses basic + employee options + RSU/PSU only. Converts and STRK are not assumed to convert \u2014 debt / preferred claims in the numerator at market.",
-    "source": "mstr_enriched_data.json"
+    "source": "https://data.strategytracker.com/"
   }
 }
