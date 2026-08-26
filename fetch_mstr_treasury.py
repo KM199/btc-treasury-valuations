@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-Fetch MicroStrategy treasury data from strategy.com (homepage, /debt, /shares)
-and enrich with Yahoo Finance prices. Writes hedge JSON for mstr_options_hedge.ipynb.
+Fetch MicroStrategy treasury data from strategy.com (homepage, /debt, /shares).
+
+CI/Python is Akamai-blocked (HTTP 403); in that case holdings/cash/preferreds
+come from data.strategytracker.com (same feed as ASST). Convertible debt is
+omitted by the tracker (latestDebt is 0) and STRE is often misquoted — those
+fields are filled from the committed mstr_treasury_fallback.json. Yahoo
+enriches prices. Writes hedge JSON for mstr_options_hedge.ipynb.
 
 Network responses are cached for 1 hour under output/cache/ (see data_cache.py).
 Use --force-refresh to bypass the cache for a run.
@@ -74,6 +79,37 @@ def mstr_treasury_is_usable(data: dict | None) -> bool:
     return holdings > 0 and strc > 0
 
 
+_SHARE_COUNT_KEYS = (
+    "strc_shares",
+    "strd_shares",
+    "stre_shares",
+    "strk_shares",
+    "strf_shares",
+    "mstr_shares",
+)
+
+
+def _prefer_precise_share_counts(live: dict, fb: dict) -> None:
+    """Keep CMS share counts when the tracker only has million-rounded notionals."""
+    for key in _SHARE_COUNT_KEYS:
+        try:
+            live_v = int(live.get(key) or 0)
+            fb_v = int(fb.get(key) or 0)
+        except (TypeError, ValueError):
+            continue
+        if live_v <= 0 or fb_v <= 0 or live_v == fb_v:
+            continue
+        # Preferreds: tracker notionals are million-rounded (~1%). Common:
+        # latestTotalShares vs CMS basic can differ more (~5%) without being
+        # a real issuance; keep the last CMS count in that band.
+        limit = 0.08 if key == "mstr_shares" else 0.03
+        if abs(live_v - fb_v) / fb_v < limit:
+            live[key] = fb_v
+            notional_key = key.replace("_shares", "_notional")
+            if fb.get(notional_key):
+                live[notional_key] = fb[notional_key]
+
+
 def load_mstr_treasury_fallback(path: Path | None = None) -> dict | None:
     """Load the committed last-known-good Strategy treasury, or None."""
     p = path if path is not None else MSTR_TREASURY_FALLBACK_PATH
@@ -118,6 +154,7 @@ def apply_mstr_treasury_fallback(live: dict, path: Path | None = None) -> dict:
                     continue
                 if live.get(key) in (None, 0, 0.0, [], {}):
                     live[key] = value
+            _prefer_precise_share_counts(live, fb)
         try:
             save_mstr_treasury_fallback(live, path=dest)
             print(f"  ✓ Updated fallback cache: {dest.name}")
@@ -171,6 +208,25 @@ STRATEGY_HEADERS = {
 }
 
 
+def _find_btc_tracker_row(obj) -> dict | None:
+    """Walk a Next.js payload for a row that still looks like btcTrackerData."""
+    if isinstance(obj, dict):
+        if obj.get("btc_holdings") is not None and (
+            "strc_metrics" in obj or "cash" in obj
+        ):
+            return obj
+        for value in obj.values():
+            found = _find_btc_tracker_row(value)
+            if found is not None:
+                return found
+    elif isinstance(obj, list):
+        for value in obj:
+            found = _find_btc_tracker_row(value)
+            if found is not None:
+                return found
+    return None
+
+
 def _fetch_strategy_btc_tracker_latest(*, force_refresh: bool = False) -> dict | None:
     """Latest btcTrackerData row from strategy.com homepage (single cached HTTP GET)."""
     try:
@@ -181,24 +237,45 @@ def _fetch_strategy_btc_tracker_latest(*, force_refresh: bool = False) -> dict |
             cache_key="strategy_com_home",
             force=force_refresh,
         )
-    except requests.RequestException:
+    except requests.HTTPError as exc:
+        status = getattr(exc.response, "status_code", None)
+        print(f"  ✗ strategy.com homepage HTTP {status} (Akamai bot block, not a JSON rename)")
+        return None
+    except requests.RequestException as exc:
+        print(f"  ✗ strategy.com homepage: {exc}")
         return None
     if not page_text:
         return None
+    if "Access Denied" in page_text[:800]:
+        print("  ✗ strategy.com homepage: Akamai Access Denied")
+        return None
     soup = BeautifulSoup(page_text, "html.parser")
     script_tag = soup.find("script", {"id": "__NEXT_DATA__"})
-    if not script_tag:
+    if not script_tag or not script_tag.string:
+        print("  ✗ strategy.com homepage: no __NEXT_DATA__ script")
         return None
     try:
         next_data = json.loads(script_tag.string)
-        btc_tracker_data = (
-            next_data.get("props", {}).get("pageProps", {}).get("btcTrackerData", [])
-        )
-        if not btc_tracker_data:
-            return None
-        return btc_tracker_data[0]
     except (json.JSONDecodeError, TypeError, ValueError):
+        print("  ✗ strategy.com homepage: __NEXT_DATA__ is not JSON")
         return None
+    page_props = (next_data.get("props") or {}).get("pageProps") or {}
+    btc_tracker_data = page_props.get("btcTrackerData")
+    if isinstance(btc_tracker_data, list) and btc_tracker_data:
+        row = btc_tracker_data[0]
+        return row if isinstance(row, dict) else None
+    found = _find_btc_tracker_row(page_props)
+    if found is not None:
+        print(
+            "  ⚠ btcTrackerData key missing; recovered a holdings row from "
+            f"pageProps keys {list(page_props)[:12]}"
+        )
+        return found
+    print(
+        "  ✗ strategy.com homepage: no btcTrackerData "
+        f"(pageProps keys: {list(page_props)[:12]})"
+    )
+    return None
 
 
 STRE_PAR_EUR = 100.0
@@ -293,6 +370,98 @@ def fetch_strc_metrics_from_strategy(*, force_refresh: bool = False) -> dict | N
         return None
     metrics = parse_strc_metrics_from_tracker(latest)
     return metrics or None
+
+
+def tracker_pref_shares(pref: dict, common_shares: float | int | None) -> int:
+    """Preferred share count from strategytracker, ignoring common-share pollution.
+
+    The MSTR blob sometimes copies ``sharesOutstanding`` from the common stock
+    onto STRC/STRD. ``notionalUSD / $100 par`` is the reliable claim size.
+    """
+    notional = pref.get("notionalUSD")
+    from_notional = int(round(float(notional) / 100.0)) if notional else 0
+    try:
+        raw = int(pref.get("sharesOutstanding") or 0)
+    except (TypeError, ValueError):
+        raw = 0
+    common = int(common_shares or 0)
+    if common and raw and abs(raw - common) < max(1_000, int(common * 0.02)):
+        return from_notional
+    if raw and from_notional and raw > from_notional * 3:
+        return from_notional
+    return raw or from_notional
+
+
+def mstr_raw_from_strategytracker(company: dict) -> dict:
+    """Map a strategytracker MSTR company blob onto fetch_mstr_strategy_raw keys."""
+    pm = company.get("processedMetrics") or {}
+    data: dict = {"source": "https://data.strategytracker.com/"}
+    holdings = pm.get("latestBtcBalance")
+    if holdings:
+        data["bitcoin_holdings"] = int(holdings)
+        data["btc_holdings"] = int(holdings)
+    cash = pm.get("latestCashBalance")
+    if cash:
+        data["cash"] = float(cash)
+        data["usd_reserve_usd"] = float(cash)
+    as_of = pm.get("latestTreasuryDate")
+    if as_of:
+        data["as_of_date"] = str(as_of)
+    common = pm.get("latestTotalShares") or pm.get("sharesOutstanding")
+    if common:
+        data["mstr_shares"] = int(common)
+    debt = pm.get("latestDebt")
+    if debt:
+        data["total_convertible_debt_principal"] = float(debt)
+
+    common_f = float(common or 0)
+    for pref in pm.get("preferredStocks") or []:
+        ticker = str(pref.get("ticker") or "").strip().lower()
+        if ticker not in {"strc", "strd", "stre", "strk", "strf"}:
+            continue
+        price = pref.get("price")
+        if ticker == "stre" and price is not None and float(price) < 30:
+            # LuxSE STRE is often mis-quoted here; leave shares/fx to fallback.
+            continue
+        shares = tracker_pref_shares(pref, common_f)
+        if shares:
+            data[f"{ticker}_shares"] = shares
+            data[f"{ticker}_notional"] = float(pref.get("notionalUSD") or shares * 100.0)
+        div = pref.get("dividendRate")
+        if div is not None:
+            d = float(div)
+            data[f"{ticker}_dividend_rate"] = d / 100.0 if d > 1 else d
+        ey = pref.get("effectiveYield")
+        if ey is not None:
+            e = float(ey)
+            data[f"{ticker}_effective_yield"] = e / 100.0 if e > 1 else e
+        if price is not None and float(price) > 0:
+            data[f"{ticker}_price"] = float(price)
+    return data
+
+
+def fetch_mstr_from_strategytracker(*, force_refresh: bool = False) -> dict:
+    """MSTR treasury from data.strategytracker.com (same API as ASST)."""
+    print("  → data.strategytracker.com MSTR payload (Akamai-free)...")
+    try:
+        from fetch_asst_api import fetch_strategytracker_company
+
+        company = fetch_strategytracker_company("MSTR", force_refresh=force_refresh)
+    except Exception as exc:
+        print(f"  ✗ strategytracker MSTR fetch failed: {exc}")
+        return {}
+    if not company:
+        print("  ✗ strategytracker has no MSTR company blob")
+        return {}
+    data = mstr_raw_from_strategytracker(company)
+    if mstr_treasury_is_usable(data):
+        print(
+            f"  ✓ strategytracker MSTR: {data['bitcoin_holdings']:,} BTC, "
+            f"{int(data.get('strc_shares') or 0):,} STRC"
+        )
+    else:
+        print("  ✗ strategytracker MSTR payload missing holdings/STRC shares")
+    return data
 
 
 def fetch_mstr_strategy_raw(*, force_refresh: bool = False) -> dict:
@@ -879,7 +1048,9 @@ def build_hedge_treasury_json(raw: dict, enriched: dict, btc_price: float) -> di
         "strf_price": strf_price,
         "strf_market_value": strf_shares * strf_price,
         "timestamp": datetime.now().isoformat(),
-        "source": "https://www.strategy.com/",
+        "source": raw.get("source")
+        or enriched.get("source")
+        or "https://www.strategy.com/",
     }
 
 
@@ -889,7 +1060,16 @@ def load_mstr_strategy_raw(
     force_refresh: bool = False,
 ) -> dict:
     """Parse strategy.com data via the 1h HTTP cache; save result to disk."""
-    data = apply_mstr_treasury_fallback(fetch_mstr_strategy_raw(force_refresh=force_refresh))
+    data = fetch_mstr_strategy_raw(force_refresh=force_refresh)
+    if not mstr_treasury_is_usable(data):
+        tracker = fetch_mstr_from_strategytracker(force_refresh=force_refresh)
+        if mstr_treasury_is_usable(tracker):
+            merged = dict(data)
+            merged.update(
+                {k: v for k, v in tracker.items() if v not in (None, "", [], {})}
+            )
+            data = merged
+    data = apply_mstr_treasury_fallback(data)
     output_dir.mkdir(parents=True, exist_ok=True)
     raw_path = output_dir / "mstr_strategy_raw.json"
     with raw_path.open("w") as f:

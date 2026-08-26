@@ -3,8 +3,8 @@
 | Source | Used for | Module |
 |--------|----------|--------|
 | Yahoo Finance | Equity/preferred spots, option chains, BTC history fallback | `fetch_yahoo.py`, `fetch_data.py` |
-| strategy.com | MSTR BTC holdings, cash, preferred metrics, convert debt, shares | `fetch_mstr_treasury.py` |
-| strategytracker / ASST API | ASST BTC, cash, SATA shares, **common dilution** (warrants/options/RSUs) | `fetch_asst_api.py`, `fetch_share_dilution.py` |
+| strategy.com | MSTR convert debt, STRE/LuxSE, CMS share counts (when reachable; CI gets Akamai 403) | `fetch_mstr_treasury.py` |
+| strategytracker | ASST treasury + dilution; **MSTR holdings/cash/preferreds** when strategy.com 403s. Ignore tracker `latestDebt` (often 0) and polluted preferred `sharesOutstanding`. | `fetch_asst_api.py`, `fetch_mstr_treasury.py`, `fetch_share_dilution.py` |
 | FRED (DGS) | Treasury yields → zero curve for option Greeks / discounting | `fetch_treasury_zero_yieldcurve.py` |
 
 ## Share dilution (rNAV denominator)
@@ -39,4 +39,4 @@ Always show `as_of` / `timestamp` fields from JSON on the site — never imply t
 
 ## Fragility
 
-Scrapers depend on `__NEXT_DATA__` / API shapes. When strategy.com or strategytracker change markup, fetch scripts fail loudly; fix parsers rather than hard-coding stale numbers.
+Scrapers depend on `__NEXT_DATA__` / API shapes. strategy.com itself has **not** renamed `btcTrackerData`; Python/CI gets Akamai 403 HTML instead of that JSON. Holdings then come from strategytracker (`MSTR.v{version}.json`); convert debt stays on the last CMS scrape. When strategytracker changes markup, fetch scripts should fail loudly — fix parsers rather than hard-coding stale numbers.

@@ -379,11 +379,18 @@ def build_market_snapshot(
             "CI refreshes ~15 minutes. Browser also polls /api/quotes."
         ),
     }
-    if mstr_from_fallback or mstr_enriched.get("_from_fallback"):
+    src = f"{mstr_enriched.get('source') or ''} {mstr_hedge.get('source') or ''}"
+    if (
+        mstr_from_fallback
+        or mstr_enriched.get("_from_fallback")
+        or "strategytracker" in src
+    ):
         notes["mstr_treasury"] = (
-            "strategy.com scrape returned no holdings (typically a 403 from "
-            "CI). BTC/cash/stack come from the last known good committed "
-            "fallback; equity and preferred prices are still live Yahoo."
+            "strategy.com is Akamai-blocked from CI/Python; holdings come from "
+            "data.strategytracker.com (same feed as ASST) when that payload is "
+            "usable, else the last known good committed fallback. Convertible "
+            "debt and STRE (LuxSE) stay on the last CMS scrape when the tracker "
+            "omits them. Equity and preferred prices are still live Yahoo."
         )
 
     return {

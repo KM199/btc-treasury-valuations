@@ -43,8 +43,9 @@ yield_curve.json
 # Website chart JSON — written every market snapshot from the live curve
 # (or yield_curve_fallback.json). Must be tracked so Vercel can compile it.
 !web/public/data/yield_curve.json
-# Last-known-good Strategy treasury (holdings, cash, stack). Tracked on
-# purpose — GitHub Actions cannot scrape strategy.com (403).
+# Last-known-good Strategy treasury is mstr_treasury_fallback.json (tracked).
+# GitHub Actions cannot scrape strategy.com (403); convert debt still comes
+# from that file when strategytracker reports 0.
 treasury_extracted_data.json
 btc_historical_data.json
 sata_valuation_results.json

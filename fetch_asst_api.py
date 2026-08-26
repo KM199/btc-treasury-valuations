@@ -35,6 +35,32 @@ def _fetch_json_url(url: str, timeout: float = 15) -> dict:
     return response.json()
 
 
+def fetch_strategytracker_company(
+    ticker: str, *, force_refresh: bool = False, timeout: float = 20
+) -> dict | None:
+    """Return ``companies[TICKER]`` from data.strategytracker.com, or None."""
+    ticker = ticker.upper()
+    latest = get_or_fetch(
+        "strategytracker_latest",
+        lambda: _fetch_json_url("https://data.strategytracker.com/latest.json", timeout=10),
+        force_refresh=force_refresh,
+    )
+    version = (latest or {}).get("version")
+    if not version:
+        return None
+    payload = get_or_fetch(
+        f"strategytracker_{ticker}_v{version}",
+        lambda: _fetch_json_url(
+            f"https://data.strategytracker.com/{ticker}.v{version}.json",
+            timeout=timeout,
+        ),
+        force_refresh=force_refresh,
+    )
+    companies = (payload or {}).get("companies") or {}
+    company = companies.get(ticker)
+    return company if isinstance(company, dict) else None
+
+
 def fetch_asst_data(output_path: Path | None = None, *, force_refresh: bool = False):
     """Fetch ASST company data from strategytracker API."""
     

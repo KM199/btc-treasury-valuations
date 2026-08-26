@@ -155,7 +155,7 @@ The gate base is `Configuration.coverage_claim_value` = SATA marked at its live 
 | `fetch_data.py` | Single entry point: Yahoo options, BTC history, yield curve, treasury, option deltas |
 | `fetch_treasury_zero_yieldcurve.py` | FRED yields → bootstrapped Treasury zero curve (`build_treasury_zero_curve`); used by `fetch_data.py` and `ibit_option_deltas.py` |
 | `fetch_asst_api.py` | ASST/SATA from strategytracker → `output/treasury_extracted_data.json` |
-| `fetch_mstr_treasury.py` | MSTR treasury from strategy.com → `output/mstr_treasury_extracted_data.json` |
+| `fetch_mstr_treasury.py` | MSTR treasury: strategy.com, else strategytracker, else `mstr_treasury_fallback.json` |
 | `data_cache.py` | TTL-based network cache (1h default) stored under `output/cache/`; `get_or_fetch()` is the main entry point for all fetch scripts |
 | `fetch_yahoo.py` | Shared cached Yahoo Finance helpers (`yahoo_spot_price`, `load_btc_spot`) used across fetch scripts |
 | `mstr_hedge_helpers.py` | Shared helpers for `mstr_options_hedge.ipynb`: theta, hedge sizing, $10k book P&L shocks |
