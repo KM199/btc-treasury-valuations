@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-08-28T21:46:46.313451+00:00",
+  "as_of": "2026-08-29T00:55:03.788973+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -44,7 +44,7 @@
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20260828T213343Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20260829T004843Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
@@ -52,7 +52,22 @@
     "options_outstanding": 0,
     "rsu_psu_unvested": 0,
     "rnav_denominator_shares": 415929000,
-    "policy": "Fallback from mstr_enriched_data.json",
-    "source": "mstr_enriched_data.json"
+    "assumed_diluted_shares_incl_converts": 0,
+    "convert_preferred_shares_excluded": 0,
+    "breakdown": [
+      {
+        "name": "Options outstanding",
+        "share_count": 0,
+        "include_in_effective_dilution": true
+      },
+      {
+        "name": "RSU/PSU unvested",
+        "share_count": 0,
+        "include_in_effective_dilution": true
+      }
+    ],
+    "excluded_from_effective": [],
+    "policy": "rNAV uses basic + employee options + RSU/PSU only. Converts and STRK are not assumed to convert \u2014 debt / preferred claims in the numerator at market.",
+    "source": "https://data.strategytracker.com/"
   }
 }
