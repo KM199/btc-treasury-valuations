@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-09-08T11:38:08.407795+00:00",
+  "as_of": "2026-09-08T15:20:45.219839+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -8,11 +8,11 @@
   },
   "asst": {
     "ticker": "ASST",
-    "basic_shares": 93262570,
-    "effective_diluted_shares": 96523351,
-    "gross_diluted_shares": 123119361,
-    "rnav_denominator_shares": 96523351,
-    "overhang_effective": 3260781,
+    "basic_shares": 94934558,
+    "effective_diluted_shares": 98148551,
+    "gross_diluted_shares": 124744561,
+    "rnav_denominator_shares": 98148551,
+    "overhang_effective": 3213993,
     "breakdown": [
       {
         "name": "Shares Underlying Traditional Warrants",
@@ -29,7 +29,7 @@
       },
       {
         "name": "Options (Legacy SMLR)",
-        "share_count": 991941,
+        "share_count": 945153,
         "include_in_effective_dilution": true,
         "notes": ""
       }
@@ -44,7 +44,7 @@
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20260908T111920Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20260908T150347Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
