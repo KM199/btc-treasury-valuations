@@ -37,6 +37,9 @@ from fetch_treasury_zero_yieldcurve import (
 from strc_paths import OUTPUT_DIR as DEFAULT_OUTPUT_DIR
 
 DEFAULT_RISK_FREE = 0.042
+# Yield for names that genuinely pay nothing (IBIT, MSTR). Imported directly by
+# hedge_story.py / mstr_hedge_helpers.py, which only price those two. It is NOT a
+# fallback for a missing yield — see resolve_dividend_yield below.
 DEFAULT_DIV_YIELD = 0.0
 DEFAULT_TREE_STEPS = 128
 IV_LOW = 1e-5
@@ -50,6 +53,33 @@ FD_SPOT_DELTA_FRAC = 1e-3
 FD_SPOT_GAMMA_FRAC = 2e-3
 FD_DELTA_ABS_FLOOR = 1e-5
 FD_GAMMA_ABS_FLOOR = 2e-2  # dollars; ensures OTM names still get a stable Γ stencil on coarse trees
+
+# --- Dividend yield policy --------------------------------------------------
+# The CRR tree models a continuous *proportional* yield: F = S·e^{(r−q)T}. q is
+# therefore a yield on SPOT, never a coupon on par. Letting a missing q silently
+# become 0.0 on a ~12% payer overstates put IV by 4–9 vol points (and corrupts the
+# Δ/Γ/ρ solved off that IV), so every ticker is classified rather than defaulted.
+PREFERRED_STATED_AMOUNT = 100.0  # $100 stated amount on the Strategy/Strive preferreds
+
+# Pay nothing — q = 0 is the answer here, not a fallback.
+#   IBIT: spot-BTC ETF, no distributions.  MSTR: common stock, no dividend.
+NON_DIVIDEND_TICKERS = frozenset({"ibit", "mstr"})
+
+# Known large payers — a missing yield is a data failure, not a zero.
+DIVIDEND_PAYING_TICKERS = frozenset({"strc", "strd", "stre", "strf", "strk", "sata"})
+
+# Treasury JSONs carrying "<ticker>_dividend_rate" / "<ticker>_effective_yield", in
+# preference order. fetch_mstr_treasury.py keeps these alive via
+# data.strategytracker.com when strategy.com 403s the scrape.
+TREASURY_YIELD_SOURCES = ("mstr_treasury_extracted_data.json", "mstr_strategy_raw.json")
+
+# dividend_yield_source values meaning "we gave up and used zero" — Greeks stored
+# under these are not trustworthy for a dividend payer.
+UNTRUSTED_DIVIDEND_SOURCES = frozenset({"MISSING-assumed-zero", "unknown-ticker-assumed-zero"})
+
+
+class MissingDividendYieldError(ValueError):
+    """A ticker known to pay a dividend has no resolvable yield on spot."""
 
 
 def _iso_expiration_keys(options_data: dict[str, Any]) -> list[str]:
@@ -352,6 +382,16 @@ def is_options_chain_enriched(data_path: Path) -> bool:
     od = data.get("options_data")
     if not isinstance(od, dict):
         return False
+    # A payer's chain enriched at q=0 (or before dividend_yield_source existed) has
+    # deltas, but wrong ones — treat it as unenriched so the next run repairs it.
+    if _ticker_from_data_path(data_path) in DIVIDEND_PAYING_TICKERS:
+        source = data.get("dividend_yield_source")
+        try:
+            stored_q = float(data.get("dividend_yield"))
+        except (TypeError, ValueError):
+            stored_q = 0.0
+        if not source or source in UNTRUSTED_DIVIDEND_SOURCES or stored_q <= 0.0:
+            return False
     checked = 0
     with_delta = 0
     for exp_str in _iso_expiration_keys(od):
@@ -366,6 +406,129 @@ def is_options_chain_enriched(data_path: Path) -> bool:
     return checked > 0 and with_delta > 0
 
 
+def _ticker_from_data_path(data_path: Path) -> str:
+    """'output/strc_data.json' -> 'strc'."""
+    stem = data_path.stem.lower()
+    return stem[:-5] if stem.endswith("_data") else stem
+
+
+def yield_on_spot_from_par_rate(rate: float, spot: float, par: float = PREFERRED_STATED_AMOUNT) -> float:
+    """Coupon on the stated amount -> current yield on the traded price.
+
+    STRC pays a fixed *cash* 12% of the $100 stated amount ($1.00/month), whatever the
+    stock trades at, so the stated rate is not a yield on spot: at $98.67 the cash
+    stream is 12.00/98.67 = 12.16%. Matching the tree's forward S·e^{−qT} to the cash
+    actually paid over T gives q ≈ D/S, so the simple current yield is the right
+    continuous q here. Compounding refinements (−12·ln(1 − D/12S) = 12.22%, or
+    ln(1 + D/S) = 11.48% if the payout were annual rather than monthly) move solved IV
+    by ≤0.10 and −0.35 vol points respectively — immaterial next to the 4–9 points lost
+    to q = 0, and the annual convention is wrong for a monthly payer anyway.
+    """
+    if spot <= 0:
+        raise ValueError(f"cannot convert a par rate to a yield on spot={spot!r}")
+    return float(rate) * float(par) / float(spot)
+
+
+def _fractional_rate(value: Any) -> float | None:
+    """Accept 12 or 0.12; reject junk and implausible magnitudes."""
+    try:
+        r = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(r):
+        return None
+    if r > 1.0:  # supplied as a percentage
+        r /= 100.0
+    return r if 0.0 < r <= 0.5 else None
+
+
+def _treasury_dividend_yield(ticker: str, spot: float, output_dir: Path) -> tuple[float, str] | None:
+    """Current yield on ``spot`` for a $100-par preferred, from the treasury JSONs.
+
+    Prefers ``<ticker>_dividend_rate`` (the coupon on par, rescaled onto live spot) over
+    ``<ticker>_effective_yield``. The latter is the same current yield but computed at
+    the scraper's own, staler, price — e.g. 12.00/98.5455 = 12.177% against 12.00/98.67 =
+    12.162% at the spot the tree is actually using.
+    """
+    if spot <= 0:
+        return None
+    for name in TREASURY_YIELD_SOURCES:
+        path = output_dir / name
+        if not path.is_file():
+            continue
+        try:
+            blob = load_json(path)
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            continue
+        if not isinstance(blob, dict):
+            continue
+        rate = _fractional_rate(blob.get(f"{ticker}_dividend_rate"))
+        if rate is not None:
+            return yield_on_spot_from_par_rate(rate, spot), f"{name}:{ticker}_dividend_rate×par/spot"
+        eff = _fractional_rate(blob.get(f"{ticker}_effective_yield"))
+        if eff is not None:
+            return eff, f"{name}:{ticker}_effective_yield"
+    return None
+
+
+def resolve_dividend_yield(
+    ticker: str,
+    data: dict[str, Any],
+    spot: float,
+    *,
+    output_dir: Path,
+    override: float | None = None,
+    strict: bool = True,
+) -> tuple[float, str]:
+    """Continuous dividend yield on spot, plus a provenance label for the JSON.
+
+    Precedence: explicit override, then a ``dividend_yield`` already on the ticker JSON,
+    then the treasury JSONs. Raises :class:`MissingDividendYieldError` (unless
+    ``strict=False``) rather than quietly pricing a known payer at q = 0.
+    """
+    t = ticker.lower()
+
+    if override is not None:
+        return float(override), "override:--div-yield"
+
+    raw_q = data.get("dividend_yield")
+    if raw_q is not None:
+        try:
+            q = float(raw_q)
+        except (TypeError, ValueError):
+            q = float("nan")
+        # A stored 0.0 (or junk) on a known payer is the old silent fallback, not data.
+        if math.isfinite(q) and (q > 0.0 or t not in DIVIDEND_PAYING_TICKERS):
+            source = data.get("dividend_yield_source")
+            return q, str(source) if source else f"{t}_data.json:dividend_yield"
+
+    if t in DIVIDEND_PAYING_TICKERS:
+        found = _treasury_dividend_yield(t, spot, output_dir)
+        if found is not None:
+            return found
+        msg = (
+            f"{t.upper()} pays a dividend but no yield on spot could be resolved: "
+            f"{t}_data.json carries no usable 'dividend_yield' (strategy.com 403?) and none of "
+            f"{', '.join(TREASURY_YIELD_SOURCES)} under {output_dir} carry "
+            f"{t}_dividend_rate / {t}_effective_yield. Run fetch_mstr_treasury.py, or pass "
+            "--div-yield. Pricing at q=0 would overstate implied vol by several points."
+        )
+        if strict:
+            raise MissingDividendYieldError(msg)
+        print(f"Warning: {msg}", file=sys.stderr)
+        return DEFAULT_DIV_YIELD, "MISSING-assumed-zero"
+
+    if t in NON_DIVIDEND_TICKERS:
+        return DEFAULT_DIV_YIELD, "none-expected"
+
+    print(
+        f"Warning: {t.upper()} has no 'dividend_yield' and no policy entry; assuming q=0. "
+        "Add it to NON_DIVIDEND_TICKERS or DIVIDEND_PAYING_TICKERS in ibit_option_deltas.py.",
+        file=sys.stderr,
+    )
+    return DEFAULT_DIV_YIELD, "unknown-ticker-assumed-zero"
+
+
 def enrich_options_files(
     data_path: Path,
     options_path: Path,
@@ -376,8 +539,16 @@ def enrich_options_files(
     tree_steps: int = DEFAULT_TREE_STEPS,
     dry_run: bool = False,
     quiet: bool = False,
-) -> tuple[int, int]:
-    """Add delta/IV/gamma to one ticker data + options JSON pair. Returns (ok, skipped)."""
+    ticker: str | None = None,
+    strict_dividend_yield: bool = True,
+) -> tuple[int, int, float, str]:
+    """Add delta/IV/gamma to one ticker data + options JSON pair.
+
+    Returns ``(ok, skipped, q, q_source)``; ``q_source`` records where the dividend
+    yield came from so downstream consumers can tell whether the Greeks are
+    trustworthy. Raises :class:`MissingDividendYieldError` for a known dividend payer
+    with no resolvable yield, rather than enriching the whole chain at q = 0.
+    """
     if not data_path.is_file():
         raise FileNotFoundError(f"Missing {data_path}")
 
@@ -387,11 +558,15 @@ def enrich_options_files(
         raise ValueError(f"{data_path.name} has no valid current_price")
     S = float(spot)
 
-    if div_yield is not None:
-        q = float(div_yield)
-    else:
-        raw_q = data.get("dividend_yield")
-        q = float(raw_q) if raw_q is not None else DEFAULT_DIV_YIELD
+    name = (ticker or _ticker_from_data_path(data_path)).lower()
+    q, q_source = resolve_dividend_yield(
+        name,
+        data,
+        S,
+        output_dir=data_path.parent,
+        override=div_yield,
+        strict=strict_dividend_yield,
+    )
 
     ts = data.get("timestamp") or datetime.now(timezone.utc).isoformat()
     valuation = _parse_valuation_datetime(str(ts))
@@ -444,11 +619,15 @@ def enrich_options_files(
             data["treasury_zero_curve"] = curve.to_json_dict()
         else:
             print(f"Flat risk-free (continuous): {fallback_rate:.6f}")
-        print(f"Div yield: {q:.4f}  tree steps: {tree_steps}")
+        print(f"Div yield: {q:.4f}  source: {q_source}  tree steps: {tree_steps}")
         print(f"Contracts with delta: {ok}  without / skipped: {skipped}")
 
     if dry_run:
-        return ok, skipped
+        return ok, skipped, q, q_source
+
+    # Stamp the yield actually used onto the chain so consumers can audit the Greeks.
+    data["dividend_yield"] = q
+    data["dividend_yield_source"] = q_source
 
     if curve is not None:
         data["treasury_zero_curve"] = curve.to_json_dict()
@@ -456,7 +635,7 @@ def enrich_options_files(
     save_json(data_path, data)
     if options_path.is_file():
         save_json(options_path, od)
-    return ok, skipped
+    return ok, skipped, q, q_source
 
 
 def _enrich_one_ticker(
@@ -466,19 +645,20 @@ def _enrich_one_ticker(
     *,
     tree_steps: int,
     quiet: bool,
-) -> tuple[str, int, int] | None:
+) -> tuple[str, int, int, float, str] | None:
     data_path = output_dir / f"{ticker}_data.json"
     if not data_path.is_file():
         return None
     options_path = output_dir / f"{ticker}_options.json"
-    ok, skipped = enrich_options_files(
+    ok, skipped, q, q_source = enrich_options_files(
         data_path,
         options_path,
         yield_curve_path=yc,
         tree_steps=tree_steps,
         quiet=quiet,
+        ticker=ticker,
     )
-    return ticker, ok, skipped
+    return ticker, ok, skipped, q, q_source
 
 
 def enrich_all_option_chains(
@@ -513,12 +693,15 @@ def enrich_all_option_chains(
     if not active:
         return
 
-    def report(result: tuple[str, int, int] | None) -> None:
+    failures: list[str] = []
+
+    def report(result: tuple[str, int, int, float, str] | None) -> None:
         if result is None:
             return
-        ticker, ok, skipped = result
+        ticker, ok, skipped, q, q_source = result
         print(f"\n{ticker.upper()}:")
         print(f"   ✓ {ok} contracts enriched, {skipped} skipped")
+        print(f"   ✓ Dividend yield q={q:.4%}  source: {q_source}")
         options_path = output_dir / f"{ticker}_options.json"
         if options_path.is_file():
             print(f"   ✓ Updated {ticker}_data.json, {options_path.name}")
@@ -526,7 +709,7 @@ def enrich_all_option_chains(
     if parallel and len(active) > 1:
         print(f"Running {len(active)} legs in parallel...")
         with ThreadPoolExecutor(max_workers=len(active)) as pool:
-            futures = [
+            futures = {
                 pool.submit(
                     _enrich_one_ticker,
                     ticker,
@@ -534,14 +717,29 @@ def enrich_all_option_chains(
                     yc,
                     tree_steps=tree_steps,
                     quiet=quiet,
-                )
+                ): ticker
                 for ticker in active
-            ]
+            }
             for fut in as_completed(futures):
-                report(fut.result())
+                try:
+                    report(fut.result())
+                except MissingDividendYieldError as exc:
+                    failures.append(f"{futures[fut].upper()}: {exc}")
     else:
         for ticker in active:
-            report(_enrich_one_ticker(ticker, output_dir, yc, tree_steps=tree_steps, quiet=quiet))
+            try:
+                report(_enrich_one_ticker(ticker, output_dir, yc, tree_steps=tree_steps, quiet=quiet))
+            except MissingDividendYieldError as exc:
+                failures.append(f"{ticker.upper()}: {exc}")
+
+    if failures:
+        # Leave the chain unenriched rather than storing Greeks solved at q=0;
+        # is_options_chain_enriched() then returns False and the next run retries.
+        print("\n" + "!" * 70)
+        print("DIVIDEND YIELD UNRESOLVED — CHAIN LEFT UNENRICHED (Greeks would be wrong)")
+        print("!" * 70)
+        for msg in failures:
+            print(f"  ✗ {msg}")
 
 
 def main() -> None:
@@ -577,7 +775,15 @@ def main() -> None:
         "--div-yield",
         type=float,
         default=None,
-        help="Continuous dividend yield (default: dividend_yield field in data JSON, else 0)",
+        help=(
+            "Continuous dividend yield on spot (default: dividend_yield in the data JSON, "
+            "else <ticker>_dividend_rate×par/spot from the treasury JSONs)"
+        ),
+    )
+    p.add_argument(
+        "--allow-missing-dividend-yield",
+        action="store_true",
+        help="Warn and price at q=0 instead of erroring when a payer's yield is unresolvable",
     )
     p.add_argument("--tree-steps", type=int, default=DEFAULT_TREE_STEPS, help="Binomial steps (speed vs accuracy)")
     p.add_argument(
@@ -599,7 +805,7 @@ def main() -> None:
         flat_r = args.risk_free
 
     try:
-        ok, skipped = enrich_options_files(
+        ok, skipped, q, q_source = enrich_options_files(
             args.ibit_data,
             args.ibit_options,
             yield_curve_path=args.yield_curve,
@@ -608,6 +814,7 @@ def main() -> None:
             tree_steps=args.tree_steps,
             dry_run=args.dry_run,
             quiet=args.quiet,
+            strict_dividend_yield=not args.allow_missing_dividend_yield,
         )
     except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
@@ -615,6 +822,7 @@ def main() -> None:
 
     if not args.quiet:
         print(f"Contracts with delta: {ok}  without / skipped: {skipped}")
+        print(f"Dividend yield q={q:.4%}  source: {q_source}")
     if not args.dry_run:
         print(f"Updated {args.ibit_data}")
         if args.ibit_options.is_file():

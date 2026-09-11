@@ -268,12 +268,40 @@ def fetch_strc_data(output_dir: Path, *, force_refresh: bool = False):
 
     if strc_metrics:
         output_data["strategy_metrics"] = strc_metrics
-        div_yield = strc_metrics.get("dividend_rate")
-        if div_yield is not None:
-            output_data["dividend_yield"] = div_yield
-            print(f"\n   ✓ STRC dividend yield: {div_yield:.2%}")
     else:
-        print("\n   ⚠ STRC website metrics unavailable")
+        print("\n   ⚠ STRC website metrics unavailable (strategy.com 403?)")
+
+    # Dividend yield for the option pricer. The stated 12% is a coupon on the $100
+    # stated amount, not a yield on the traded price, so rescale it onto live spot.
+    # strategy.com 403s reliably now, so fall back to the strategytracker treasury
+    # JSONs rather than letting the field go missing — a missing yield used to be
+    # silently priced as q=0, overstating STRC put IV by 4-9 vol points.
+    from ibit_option_deltas import (
+        MissingDividendYieldError,
+        resolve_dividend_yield,
+        yield_on_spot_from_par_rate,
+    )
+
+    par_rate = (strc_metrics or {}).get("dividend_rate")
+    if par_rate is not None and current_price:
+        q = yield_on_spot_from_par_rate(float(par_rate), float(current_price))
+        output_data["dividend_yield"] = q
+        output_data["dividend_yield_source"] = "strategy.com:dividend_rate×par/spot"
+        print(
+            f"\n   ✓ STRC dividend yield: {q:.2%} "
+            f"({float(par_rate):.2%} coupon on $100 par / ${current_price:,.2f} spot)"
+        )
+    else:
+        try:
+            q, q_source = resolve_dividend_yield(
+                "strc", {}, float(current_price or 0), output_dir=output_dir
+            )
+        except MissingDividendYieldError as exc:
+            print(f"   ⚠ STRC dividend yield unresolved: {exc}")
+        else:
+            output_data["dividend_yield"] = q
+            output_data["dividend_yield_source"] = q_source
+            print(f"\n   ✓ STRC dividend yield: {q:.2%} (source: {q_source})")
 
     kept = _maybe_keep_cached_ticker_files("strc", output_dir, force_refresh=force_refresh)
     if kept is not None:

@@ -459,6 +459,14 @@ def compute_pnl_sensitivity(
     if hedge_calc.empty or "delta" not in hedge_calc.columns or not hedge_calc["delta"].notna().any():
         return pd.DataFrame()
     shocks = list(shock_pcts) if shock_pcts else SHOCK_PCTS
+    # Dividend yield the chain's IV/Greeks were solved at (ibit_option_deltas stamps it).
+    # The STRC leg pays ~12%, so repricing it at 0 would contradict its own stored IV.
+    try:
+        q = float(data.get("dividend_yield"))
+    except (TypeError, ValueError):
+        q = DEFAULT_DIV_YIELD
+    if not math.isfinite(q):
+        q = DEFAULT_DIV_YIELD
     curve_rf, _ = _load_treasury_zero_curve(data, yield_curve_path)
     ts = data.get("timestamp")
     valuation_dt = _parse_valuation_datetime(str(ts)) if ts else datetime.now(timezone.utc)
@@ -513,11 +521,11 @@ def compute_pnl_sensitivity(
                 K_short = float(K_short)
                 sig_short = row.get("implied_volatility_short")
                 sig_s = float(sig_short) if pd.notna(sig_short) and float(sig_short) > 0 else sig
-            V0_long = american_price_crr(S0, K, T_last, ri, DEFAULT_DIV_YIELD, sig, n_steps=DEFAULT_TREE_STEPS, is_call=False)
+            V0_long = american_price_crr(S0, K, T_last, ri, q, sig, n_steps=DEFAULT_TREE_STEPS, is_call=False)
             V0 = V0_long
             if is_spread:
                 V0_short = american_price_crr(
-                    S0, K_short, T_last, ri, DEFAULT_DIV_YIELD, sig_s,
+                    S0, K_short, T_last, ri, q, sig_s,
                     n_steps=DEFAULT_TREE_STEPS, is_call=False,
                 )
                 V0 = V0_long - V0_short
@@ -526,12 +534,12 @@ def compute_pnl_sensitivity(
                 S1 = S0 * (1 + h)
                 r1 = ri * (1 + h)
                 V1_long = american_price_crr(
-                    S1, K, T_last, r1, DEFAULT_DIV_YIELD, sig,
+                    S1, K, T_last, r1, q, sig,
                     n_steps=DEFAULT_TREE_STEPS, is_call=False,
                 )
                 if is_spread:
                     V1_short = american_price_crr(
-                        S1, K_short, T_last, r1, DEFAULT_DIV_YIELD, sig_s,
+                        S1, K_short, T_last, r1, q, sig_s,
                         n_steps=DEFAULT_TREE_STEPS, is_call=False,
                     )
                     V1 = V1_long - V1_short
