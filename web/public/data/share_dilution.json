@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-09-21T06:53:12.282880+00:00",
+  "as_of": "2026-09-21T13:45:19.017636+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -8,19 +8,12 @@
   },
   "asst": {
     "ticker": "ASST",
-    "basic_shares": 94968764,
-    "effective_diluted_shares": 98139091,
-    "gross_diluted_shares": 124735101,
-    "rnav_denominator_shares": 98139091,
-    "overhang_effective": 3170327,
+    "basic_shares": 97002649,
+    "effective_diluted_shares": 100144713,
+    "gross_diluted_shares": 125955168,
+    "rnav_denominator_shares": 100144713,
+    "overhang_effective": 3142064,
     "breakdown": [
-      {
-        "name": "Shares Underlying Traditional Warrants",
-        "share_count": 26596010,
-        "include_in_effective_dilution": false,
-        "notes": "Represents shares exercisable underlying Traditional Warrants. Exercises of traditional warrants subject to the payment of exercise price to Company.",
-        "expiry": "2026-09-15"
-      },
       {
         "name": "RSU (Unvested)",
         "share_count": 2268840,
@@ -29,22 +22,29 @@
       },
       {
         "name": "Options (Legacy SMLR)",
-        "share_count": 901487,
+        "share_count": 873224,
         "include_in_effective_dilution": true,
         "notes": ""
+      },
+      {
+        "name": "Shares Underlying Traditional Warrants",
+        "share_count": 25810455,
+        "include_in_effective_dilution": false,
+        "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
+        "expiry": "2026-09-15"
       }
     ],
     "excluded_from_effective": [
       {
         "name": "Shares Underlying Traditional Warrants",
-        "share_count": 26596010,
+        "share_count": 25810455,
         "include_in_effective_dilution": false,
-        "notes": "Represents shares exercisable underlying Traditional Warrants. Exercises of traditional warrants subject to the payment of exercise price to Company.",
+        "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
         "expiry": "2026-09-15"
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20260921T064906Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20260921T133420Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
