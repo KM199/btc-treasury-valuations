@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-02T15:32:16.325766+00:00",
+  "as_of": "2026-10-02T17:34:31.324994+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -8,11 +8,11 @@
   },
   "asst": {
     "ticker": "ASST",
-    "basic_shares": 97002649,
-    "effective_diluted_shares": 100144713,
-    "gross_diluted_shares": 125955168,
-    "rnav_denominator_shares": 100144713,
-    "overhang_effective": 3142064,
+    "basic_shares": 97651721,
+    "effective_diluted_shares": 100776795,
+    "gross_diluted_shares": 126126601,
+    "rnav_denominator_shares": 100776795,
+    "overhang_effective": 3125074,
     "breakdown": [
       {
         "name": "RSU (Unvested)",
@@ -21,30 +21,30 @@
         "notes": ""
       },
       {
-        "name": "Options (Legacy SMLR)",
-        "share_count": 873224,
-        "include_in_effective_dilution": true,
-        "notes": ""
-      },
-      {
         "name": "Shares Underlying Traditional Warrants",
-        "share_count": 25810455,
+        "share_count": 25349806,
         "include_in_effective_dilution": false,
         "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
         "expiry": "2026-09-15"
+      },
+      {
+        "name": "Options (Legacy SMLR)",
+        "share_count": 856234,
+        "include_in_effective_dilution": true,
+        "notes": ""
       }
     ],
     "excluded_from_effective": [
       {
         "name": "Shares Underlying Traditional Warrants",
-        "share_count": 25810455,
+        "share_count": 25349806,
         "include_in_effective_dilution": false,
         "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
         "expiry": "2026-09-15"
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20261002T151856Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20261002T171856Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
@@ -52,22 +52,7 @@
     "options_outstanding": 0,
     "rsu_psu_unvested": 0,
     "rnav_denominator_shares": 415929000,
-    "assumed_diluted_shares_incl_converts": 0,
-    "convert_preferred_shares_excluded": 0,
-    "breakdown": [
-      {
-        "name": "Options outstanding",
-        "share_count": 0,
-        "include_in_effective_dilution": true
-      },
-      {
-        "name": "RSU/PSU unvested",
-        "share_count": 0,
-        "include_in_effective_dilution": true
-      }
-    ],
-    "excluded_from_effective": [],
-    "policy": "rNAV uses basic + employee options + RSU/PSU only. Converts and STRK are not assumed to convert \u2014 debt / preferred claims in the numerator at market.",
-    "source": "https://data.strategytracker.com/"
+    "policy": "Fallback from mstr_enriched_data.json",
+    "source": "mstr_enriched_data.json"
   }
 }
