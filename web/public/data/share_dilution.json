@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-05T07:44:04.995884+00:00",
+  "as_of": "2026-10-05T16:26:21.759210+00:00",
   "notes": {
     "rnav_rule": "Denominator = common equity overhang only (options/RSUs/ITM warrants). Preferreds (incl. STRK) and convertible debt are subtracted as claims in the numerator. We do not assume converts or STRK convert.",
     "yahoo": "Do not use Yahoo impliedSharesOutstanding for dilution \u2014 it is mostly dual-class consolidation, not warrants/options/RSUs.",
@@ -8,43 +8,43 @@
   },
   "asst": {
     "ticker": "ASST",
-    "basic_shares": 97651721,
-    "effective_diluted_shares": 100776795,
-    "gross_diluted_shares": 126126601,
-    "rnav_denominator_shares": 100776795,
-    "overhang_effective": 3125074,
+    "basic_shares": 100938986,
+    "effective_diluted_shares": 103714772,
+    "gross_diluted_shares": 126964478,
+    "rnav_denominator_shares": 103714772,
+    "overhang_effective": 2775786,
     "breakdown": [
       {
         "name": "RSU (Unvested)",
-        "share_count": 2268840,
+        "share_count": 1932252,
+        "include_in_effective_dilution": true,
+        "notes": ""
+      },
+      {
+        "name": "Options (Legacy SMLR)",
+        "share_count": 843534,
         "include_in_effective_dilution": true,
         "notes": ""
       },
       {
         "name": "Shares Underlying Traditional Warrants",
-        "share_count": 25349806,
+        "share_count": 23249706,
         "include_in_effective_dilution": false,
         "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
         "expiry": "2026-09-15"
-      },
-      {
-        "name": "Options (Legacy SMLR)",
-        "share_count": 856234,
-        "include_in_effective_dilution": true,
-        "notes": ""
       }
     ],
     "excluded_from_effective": [
       {
         "name": "Shares Underlying Traditional Warrants",
-        "share_count": 25349806,
+        "share_count": 23249706,
         "include_in_effective_dilution": false,
         "notes": "Expire 2026-09-15; deep OTM vs spot \u2014 likely expire worthless",
         "expiry": "2026-09-15"
       }
     ],
     "policy": "rNAV uses effective diluted common (basic + RSUs/options and any ITM warrants). OTM warrants stay in gross only. SATA is a preferred claim in the numerator \u2014 not diluted here.",
-    "source": "https://data.strategytracker.com/ASST.v20261005T073357Z.json"
+    "source": "https://data.strategytracker.com/ASST.v20261005T161901Z.json"
   },
   "mstr": {
     "ticker": "MSTR",
