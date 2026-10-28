@@ -1,14 +1,14 @@
 {
-  "as_of_date": "2026-10-26",
+  "as_of_date": "2026-10-27",
   "source": "FRED DGS* (fredgraph.csv) + semiannual par bootstrap",
   "flat_after_years": 30.0,
-  "reference_zero_annual": 0.052766658162715085,
+  "reference_zero_annual": 0.05266240191522176,
   "max_years": 40.0,
   "pillars": [
     {
       "years": 0.08333333333333333,
-      "zero_annual": 0.041956295965468016,
-      "discount": 0.996580858621998
+      "zero_annual": 0.04185210554547991,
+      "discount": 0.99658916349709
     },
     {
       "years": 0.25,
@@ -17,59 +17,59 @@
     },
     {
       "years": 0.5,
-      "zero_annual": 0.044459994312026296,
-      "discount": 0.9784848256825278
+      "zero_annual": 0.04435555353472087,
+      "discount": 0.9785337511469384
     },
     {
       "years": 1.0,
-      "zero_annual": 0.04520779118100138,
-      "discount": 0.956747556263506
+      "zero_annual": 0.04551920619144023,
+      "discount": 0.9564625824930992
     },
     {
       "years": 2.0,
-      "zero_annual": 0.04742862079461596,
-      "discount": 0.9114883590870014
+      "zero_annual": 0.04763239469676406,
+      "discount": 0.911133808241066
     },
     {
       "years": 3.0,
-      "zero_annual": 0.048579836332553805,
-      "discount": 0.8673522180383277
+      "zero_annual": 0.04867613774207791,
+      "discount": 0.8671132894464905
     },
     {
       "years": 5.0,
-      "zero_annual": 0.049099015624927134,
-      "discount": 0.7868964795656356
+      "zero_annual": 0.04885512841786621,
+      "discount": 0.7878117787837676
     },
     {
       "years": 7.0,
-      "zero_annual": 0.04989550207056559,
-      "discount": 0.7111766254645469
+      "zero_annual": 0.049914163859645866,
+      "discount": 0.7110881440946398
     },
     {
       "years": 10.0,
-      "zero_annual": 0.05099218707681241,
-      "discount": 0.6081421769546925
+      "zero_annual": 0.05086494769751271,
+      "discount": 0.608878920607529
     },
     {
       "years": 20.0,
-      "zero_annual": 0.05714551726057304,
-      "discount": 0.3290823190668944
+      "zero_annual": 0.05703404934204559,
+      "discount": 0.32977707233165116
     },
     {
       "years": 30.0,
-      "zero_annual": 0.052766658162715085,
-      "discount": 0.2138140980341507
+      "zero_annual": 0.05266240191522176,
+      "discount": 0.21445029908719695
     }
   ],
   "curve": [
     {
       "years": 0.08333333333333333,
-      "zero_annual": 0.041956295965468016,
+      "zero_annual": 0.04185210554547991,
       "is_pillar": true
     },
     {
       "years": 0.16666666666666666,
-      "zero_annual": 0.0428162645979242,
+      "zero_annual": 0.04279019451718691,
       "is_pillar": false
     },
     {
@@ -79,2387 +79,2387 @@
     },
     {
       "years": 0.3333333333333333,
-      "zero_annual": 0.04378131591009904,
+      "zero_annual": 0.043729128149008645,
       "is_pillar": false
     },
     {
       "years": 0.4166666666666667,
-      "zero_annual": 0.044188470013193815,
+      "zero_annual": 0.044104938276906314,
       "is_pillar": false
     },
     {
       "years": 0.5,
-      "zero_annual": 0.044459994312026296,
+      "zero_annual": 0.04435555353472087,
       "is_pillar": true
     },
     {
       "years": 0.5833333333333334,
-      "zero_annual": 0.04467359595035614,
+      "zero_annual": 0.044687893502742826,
       "is_pillar": false
     },
     {
       "years": 0.6666666666666666,
-      "zero_annual": 0.04483382584590667,
+      "zero_annual": 0.044937217881171776,
       "is_pillar": false
     },
     {
       "years": 0.75,
-      "zero_annual": 0.04495846608843879,
+      "zero_annual": 0.04513117797970656,
       "is_pillar": false
     },
     {
       "years": 0.8333333333333334,
-      "zero_annual": 0.045058188987753045,
+      "zero_annual": 0.0452863719801293,
       "is_pillar": false
     },
     {
       "years": 0.9166666666666666,
-      "zero_annual": 0.0451397875293964,
+      "zero_annual": 0.045413366030413016,
       "is_pillar": false
     },
     {
       "years": 1.0,
-      "zero_annual": 0.04520779118100138,
+      "zero_annual": 0.04551920619144023,
       "is_pillar": true
     },
     {
       "years": 1.0833333333333333,
-      "zero_annual": 0.04554915053820596,
+      "zero_annual": 0.04584403445700658,
       "is_pillar": false
     },
     {
       "years": 1.1666666666666667,
-      "zero_annual": 0.045841833005461075,
+      "zero_annual": 0.046122539007226626,
       "is_pillar": false
     },
     {
       "years": 1.25,
-      "zero_annual": 0.04609555741610771,
+      "zero_annual": 0.04636396960776734,
       "is_pillar": false
     },
     {
       "years": 1.3333333333333333,
-      "zero_annual": 0.04631761676868629,
+      "zero_annual": 0.04657526708966242,
       "is_pillar": false
     },
     {
       "years": 1.4166666666666667,
-      "zero_annual": 0.046513590636573676,
+      "zero_annual": 0.04676174147792045,
       "is_pillar": false
     },
     {
       "years": 1.5,
-      "zero_annual": 0.04668782044464859,
+      "zero_annual": 0.046927524382301744,
       "is_pillar": false
     },
     {
       "years": 1.5833333333333333,
-      "zero_annual": 0.046843734860276376,
+      "zero_annual": 0.04707587871045571,
       "is_pillar": false
     },
     {
       "years": 1.6666666666666667,
-      "zero_annual": 0.04698407769160173,
+      "zero_annual": 0.04720941557992453,
       "is_pillar": false
     },
     {
       "years": 1.75,
-      "zero_annual": 0.04711107075118459,
+      "zero_annual": 0.04733024932694185,
       "is_pillar": false
     },
     {
       "years": 1.8333333333333333,
-      "zero_annual": 0.04722653235380814,
+      "zero_annual": 0.04744011028675188,
       "is_pillar": false
     },
     {
       "years": 1.9166666666666667,
-      "zero_annual": 0.047331964936114135,
+      "zero_annual": 0.04754042818402704,
       "is_pillar": false
     },
     {
       "years": 2.0,
-      "zero_annual": 0.04742862079461596,
+      "zero_annual": 0.04763239469676406,
       "is_pillar": true
     },
     {
       "years": 2.0833333333333335,
-      "zero_annual": 0.04756669989802309,
+      "zero_annual": 0.04775758899141902,
       "is_pillar": false
     },
     {
       "years": 2.1666666666666665,
-      "zero_annual": 0.047694173687964136,
+      "zero_annual": 0.047873166234654985,
       "is_pillar": false
     },
     {
       "years": 2.25,
-      "zero_annual": 0.04781221880566178,
+      "zero_annual": 0.04798019356820671,
       "is_pillar": false
     },
     {
       "years": 2.3333333333333335,
-      "zero_annual": 0.047921844038405936,
+      "zero_annual": 0.048079585880370646,
       "is_pillar": false
     },
     {
       "years": 2.4166666666666665,
-      "zero_annual": 0.048023919220358646,
+      "zero_annual": 0.048172132024099756,
       "is_pillar": false
     },
     {
       "years": 2.5,
-      "zero_annual": 0.04811919836083334,
+      "zero_annual": 0.04825851579775797,
       "is_pillar": false
     },
     {
       "years": 2.5833333333333335,
-      "zero_annual": 0.04820833830185434,
+      "zero_annual": 0.04833933286978653,
       "is_pillar": false
     },
     {
       "years": 2.6666666666666665,
-      "zero_annual": 0.04829191388175613,
+      "zero_annual": 0.04841510453355813,
       "is_pillar": false
     },
     {
       "years": 2.75,
-      "zero_annual": 0.04837043034507538,
+      "zero_annual": 0.04848628896406981,
       "is_pillar": false
     },
     {
       "years": 2.8333333333333335,
-      "zero_annual": 0.04844433356501243,
+      "zero_annual": 0.048553290490256806,
       "is_pillar": false
     },
     {
       "years": 2.9166666666666665,
-      "zero_annual": 0.04851401851545556,
+      "zero_annual": 0.04861646727940094,
       "is_pillar": false
     },
     {
       "years": 3.0,
-      "zero_annual": 0.048579836332553805,
+      "zero_annual": 0.04867613774207791,
       "is_pillar": true
     },
     {
       "years": 3.0833333333333335,
-      "zero_annual": 0.048614907919404926,
+      "zero_annual": 0.04868823074438744,
       "is_pillar": false
     },
     {
       "years": 3.1666666666666665,
-      "zero_annual": 0.04864813471531071,
+      "zero_annual": 0.0486996874015273,
       "is_pillar": false
     },
     {
       "years": 3.25,
-      "zero_annual": 0.04867965854619771,
+      "zero_annual": 0.04871055665348645,
       "is_pillar": false
     },
     {
       "years": 3.3333333333333335,
-      "zero_annual": 0.0487096070633013,
+      "zero_annual": 0.04872088254719342,
       "is_pillar": false
     },
     {
       "years": 3.4166666666666665,
-      "zero_annual": 0.04873809547084629,
+      "zero_annual": 0.048730704833121585,
       "is_pillar": false
     },
     {
       "years": 3.5,
-      "zero_annual": 0.0487652280070483,
+      "zero_annual": 0.04874005947667692,
       "is_pillar": false
     },
     {
       "years": 3.5833333333333335,
-      "zero_annual": 0.04879109921856939,
+      "zero_annual": 0.04874897909824383,
       "is_pillar": false
     },
     {
       "years": 3.6666666666666665,
-      "zero_annual": 0.04881579506127354,
+      "zero_annual": 0.04875749335323465,
       "is_pillar": false
     },
     {
       "years": 3.75,
-      "zero_annual": 0.04883939385428748,
+      "zero_annual": 0.04876562926147576,
       "is_pillar": false
     },
     {
       "years": 3.8333333333333335,
-      "zero_annual": 0.04886196710967772,
+      "zero_annual": 0.04877341149363468,
       "is_pillar": false
     },
     {
       "years": 3.9166666666666665,
-      "zero_annual": 0.048883580256262826,
+      "zero_annual": 0.048780862621091936,
       "is_pillar": false
     },
     {
       "years": 4.0,
-      "zero_annual": 0.048904293272991284,
+      "zero_annual": 0.04878800333457978,
       "is_pillar": false
     },
     {
       "years": 4.083333333333333,
-      "zero_annual": 0.04892416124479726,
+      "zero_annual": 0.04879485263605621,
       "is_pillar": false
     },
     {
       "years": 4.166666666666667,
-      "zero_annual": 0.0489432348517842,
+      "zero_annual": 0.04880142800755616,
       "is_pillar": false
     },
     {
       "years": 4.25,
-      "zero_annual": 0.048961560800881765,
+      "zero_annual": 0.04880774556018119,
       "is_pillar": false
     },
     {
       "years": 4.333333333333333,
-      "zero_annual": 0.04897918220771902,
+      "zero_annual": 0.048813820165899635,
       "is_pillar": false
     },
     {
       "years": 4.416666666666667,
-      "zero_annual": 0.048996138935282874,
+      "zero_annual": 0.04881966557443107,
       "is_pillar": false
     },
     {
       "years": 4.5,
-      "zero_annual": 0.04901246789496483,
+      "zero_annual": 0.048825294517141016,
       "is_pillar": false
     },
     {
       "years": 4.583333333333333,
-      "zero_annual": 0.04902820331477953,
+      "zero_annual": 0.04883071879960754,
       "is_pillar": false
     },
     {
       "years": 4.666666666666667,
-      "zero_annual": 0.049043376978855635,
+      "zero_annual": 0.048835949384268273,
       "is_pillar": false
     },
     {
       "years": 4.75,
-      "zero_annual": 0.04905801844172886,
+      "zero_annual": 0.048840996464371234,
       "is_pillar": false
     },
     {
       "years": 4.833333333333333,
-      "zero_annual": 0.049072155220474034,
+      "zero_annual": 0.048845869530274255,
       "is_pillar": false
     },
     {
       "years": 4.916666666666667,
-      "zero_annual": 0.049085812967305964,
+      "zero_annual": 0.04885057742900534,
       "is_pillar": false
     },
     {
       "years": 5.0,
-      "zero_annual": 0.049099015624927134,
+      "zero_annual": 0.04885512841786621,
       "is_pillar": true
     },
     {
       "years": 5.083333333333333,
-      "zero_annual": 0.04914469932233567,
+      "zero_annual": 0.04891586384848723,
       "is_pillar": false
     },
     {
       "years": 5.166666666666667,
-      "zero_annual": 0.049188911246188516,
+      "zero_annual": 0.04897464342029112,
       "is_pillar": false
     },
     {
       "years": 5.25,
-      "zero_annual": 0.04923172139225196,
+      "zero_annual": 0.049031560112660966,
       "is_pillar": false
     },
     {
       "years": 5.333333333333333,
-      "zero_annual": 0.049273195387008695,
+      "zero_annual": 0.04908670110340152,
       "is_pillar": false
     },
     {
       "years": 5.416666666666667,
-      "zero_annual": 0.04931339482334396,
+      "zero_annual": 0.04914014821428547,
       "is_pillar": false
     },
     {
       "years": 5.5,
-      "zero_annual": 0.04935237756575206,
+      "zero_annual": 0.049191978316162066,
       "is_pillar": false
     },
     {
       "years": 5.583333333333333,
-      "zero_annual": 0.049390198028242516,
+      "zero_annual": 0.04924226369784135,
       "is_pillar": false
     },
     {
       "years": 5.666666666666667,
-      "zero_annual": 0.04942690742775557,
+      "zero_annual": 0.049291072402485314,
       "is_pillar": false
     },
     {
       "years": 5.75,
-      "zero_annual": 0.04946255401556443,
+      "zero_annual": 0.04933846853478929,
       "is_pillar": false
     },
     {
       "years": 5.833333333333333,
-      "zero_annual": 0.04949718328886865,
+      "zero_annual": 0.04938451254187348,
       "is_pillar": false
     },
     {
       "years": 5.916666666666667,
-      "zero_annual": 0.04953083818452386,
+      "zero_annual": 0.04942926147047544,
       "is_pillar": false
     },
     {
       "years": 6.0,
-      "zero_annual": 0.04956355925664746,
+      "zero_annual": 0.049472769202738354,
       "is_pillar": false
     },
     {
       "years": 6.083333333333333,
-      "zero_annual": 0.04959538483964088,
+      "zero_annual": 0.0495150866726497,
       "is_pillar": false
     },
     {
       "years": 6.166666666666667,
-      "zero_annual": 0.049626351198008845,
+      "zero_annual": 0.04955626206495478,
       "is_pillar": false
     },
     {
       "years": 6.25,
-      "zero_annual": 0.049656492664205354,
+      "zero_annual": 0.04959634099818011,
       "is_pillar": false
     },
     {
       "years": 6.333333333333333,
-      "zero_annual": 0.04968584176560964,
+      "zero_annual": 0.04963536669322832,
       "is_pillar": false
     },
     {
       "years": 6.416666666666667,
-      "zero_annual": 0.04971442934161674,
+      "zero_annual": 0.049673380128853584,
       "is_pillar": false
     },
     {
       "years": 6.5,
-      "zero_annual": 0.04974228465173125,
+      "zero_annual": 0.04971042018519278,
       "is_pillar": false
     },
     {
       "years": 6.583333333333333,
-      "zero_annual": 0.0497694354754592,
+      "zero_annual": 0.0497465237764112,
       "is_pillar": false
     },
     {
       "years": 6.666666666666667,
-      "zero_annual": 0.04979590820471569,
+      "zero_annual": 0.04978172597341324,
       "is_pillar": false
     },
     {
       "years": 6.75,
-      "zero_annual": 0.049821727929394655,
+      "zero_annual": 0.04981606011747486,
       "is_pillar": false
     },
     {
       "years": 6.833333333333333,
-      "zero_annual": 0.04984691851668277,
+      "zero_annual": 0.04984955792557133,
       "is_pillar": false
     },
     {
       "years": 6.916666666666667,
-      "zero_annual": 0.04987150268464635,
+      "zero_annual": 0.04988224958810261,
       "is_pillar": false
     },
     {
       "years": 7.0,
-      "zero_annual": 0.04989550207056559,
+      "zero_annual": 0.049914163859645866,
       "is_pillar": true
     },
     {
       "years": 7.083333333333333,
-      "zero_annual": 0.04993848775934073,
+      "zero_annual": 0.04995143328939311,
       "is_pillar": false
     },
     {
       "years": 7.166666666666667,
-      "zero_annual": 0.049980475479971975,
+      "zero_annual": 0.04998783726539813,
       "is_pillar": false
     },
     {
       "years": 7.25,
-      "zero_annual": 0.050021499587305174,
+      "zero_annual": 0.05002340558740159,
       "is_pillar": false
     },
     {
       "years": 7.333333333333333,
-      "zero_annual": 0.05006159287719836,
+      "zero_annual": 0.050058166702562135,
       "is_pillar": false
     },
     {
       "years": 7.416666666666667,
-      "zero_annual": 0.05010078667396223,
+      "zero_annual": 0.050092147781337415,
       "is_pillar": false
     },
     {
       "years": 7.5,
-      "zero_annual": 0.05013911091197909,
+      "zero_annual": 0.05012537478831103,
       "is_pillar": false
     },
     {
       "years": 7.583333333333333,
-      "zero_annual": 0.050176594211950754,
+      "zero_annual": 0.05015787254835691,
       "is_pillar": false
     },
     {
       "years": 7.666666666666667,
-      "zero_annual": 0.050213263952178844,
+      "zero_annual": 0.05018966480849496,
       "is_pillar": false
     },
     {
       "years": 7.75,
-      "zero_annual": 0.05024914633525768,
+      "zero_annual": 0.05022077429576122,
       "is_pillar": false
     },
     {
       "years": 7.833333333333333,
-      "zero_annual": 0.05028426645051187,
+      "zero_annual": 0.05025122277138827,
       "is_pillar": false
     },
     {
       "years": 7.916666666666667,
-      "zero_annual": 0.05031864833250155,
+      "zero_annual": 0.050281031081570005,
       "is_pillar": false
     },
     {
       "years": 8.0,
-      "zero_annual": 0.05035231501587267,
+      "zero_annual": 0.05031021920505663,
       "is_pillar": false
     },
     {
       "years": 8.083333333333334,
-      "zero_annual": 0.050385288586821675,
+      "zero_annual": 0.050338806297809624,
       "is_pillar": false
     },
     {
       "years": 8.166666666666666,
-      "zero_annual": 0.0504175902314139,
+      "zero_annual": 0.05036681073492644,
       "is_pillar": false
     },
     {
       "years": 8.25,
-      "zero_annual": 0.05044924028097686,
+      "zero_annual": 0.05039425015002719,
       "is_pillar": false
     },
     {
       "years": 8.333333333333334,
-      "zero_annual": 0.05048025825477476,
+      "zero_annual": 0.05042114147228238,
       "is_pillar": false
     },
     {
       "years": 8.416666666666666,
-      "zero_annual": 0.05051066290015194,
+      "zero_annual": 0.05044750096124195,
       "is_pillar": false
     },
     {
       "years": 8.5,
-      "zero_annual": 0.05054047223031666,
+      "zero_annual": 0.050473344239619466,
       "is_pillar": false
     },
     {
       "years": 8.583333333333334,
-      "zero_annual": 0.050569703559929735,
+      "zero_annual": 0.050498686324168096,
       "is_pillar": false
     },
     {
       "years": 8.666666666666666,
-      "zero_annual": 0.050598373538639274,
+      "zero_annual": 0.050523541654778015,
       "is_pillar": false
     },
     {
       "years": 8.75,
-      "zero_annual": 0.05062649818270559,
+      "zero_annual": 0.05054792412191311,
       "is_pillar": false
     },
     {
       "years": 8.833333333333334,
-      "zero_annual": 0.0506540929048358,
+      "zero_annual": 0.0505718470924954,
       "is_pillar": false
     },
     {
       "years": 8.916666666666666,
-      "zero_annual": 0.05068117254234861,
+      "zero_annual": 0.0505953234343417,
       "is_pillar": false
     },
     {
       "years": 9.0,
-      "zero_annual": 0.05070775138377748,
+      "zero_annual": 0.05061836553924226,
       "is_pillar": false
     },
     {
       "years": 9.083333333333334,
-      "zero_annual": 0.0507338431940092,
+      "zero_annual": 0.05064098534477246,
       "is_pillar": false
     },
     {
       "years": 9.166666666666666,
-      "zero_annual": 0.05075946123805508,
+      "zero_annual": 0.05066319435491384,
       "is_pillar": false
     },
     {
       "years": 9.25,
-      "zero_annual": 0.05078461830353809,
+      "zero_annual": 0.050685003659564076,
       "is_pillar": false
     },
     {
       "years": 9.333333333333334,
-      "zero_annual": 0.05080932672197691,
+      "zero_annual": 0.05070642395300151,
       "is_pillar": false
     },
     {
       "years": 9.416666666666666,
-      "zero_annual": 0.050833598388941414,
+      "zero_annual": 0.050727465551370976,
       "is_pillar": false
     },
     {
       "years": 9.5,
-      "zero_annual": 0.050857444783148686,
+      "zero_annual": 0.050748138409249854,
       "is_pillar": false
     },
     {
       "years": 9.583333333333334,
-      "zero_annual": 0.050880876984564116,
+      "zero_annual": 0.05076845213535086,
       "is_pillar": false
     },
     {
       "years": 9.666666666666666,
-      "zero_annual": 0.050903905691567,
+      "zero_annual": 0.05078841600741457,
       "is_pillar": false
     },
     {
       "years": 9.75,
-      "zero_annual": 0.05092654123723728,
+      "zero_annual": 0.050808038986337456,
       "is_pillar": false
     },
     {
       "years": 9.833333333333334,
-      "zero_annual": 0.05094879360481541,
+      "zero_annual": 0.05082732972958337,
       "is_pillar": false
     },
     {
       "years": 9.916666666666666,
-      "zero_annual": 0.05097067244238351,
+      "zero_annual": 0.050846296603918706,
       "is_pillar": false
     },
     {
       "years": 10.0,
-      "zero_annual": 0.05099218707681241,
+      "zero_annual": 0.05086494769751271,
       "is_pillar": true
     },
     {
       "years": 10.083333333333334,
-      "zero_annual": 0.05109360332468671,
+      "zero_annual": 0.05096662310106259,
       "is_pillar": false
     },
     {
       "years": 10.166666666666666,
-      "zero_annual": 0.05119336655801887,
+      "zero_annual": 0.05106664129163274,
       "is_pillar": false
     },
     {
       "years": 10.25,
-      "zero_annual": 0.05129151686415634,
+      "zero_annual": 0.05116504245776787,
       "is_pillar": false
     },
     {
       "years": 10.333333333333334,
-      "zero_annual": 0.051388093044639316,
+      "zero_annual": 0.051261865498980486,
       "is_pillar": false
     },
     {
       "years": 10.416666666666666,
-      "zero_annual": 0.05148313266634541,
+      "zero_annual": 0.051357148077021186,
       "is_pillar": false
     },
     {
       "years": 10.5,
-      "zero_annual": 0.05157667211020889,
+      "zero_annual": 0.051450926664720065,
       "is_pillar": false
     },
     {
       "years": 10.583333333333334,
-      "zero_annual": 0.05166874661765286,
+      "zero_annual": 0.05154323659253479,
       "is_pillar": false
     },
     {
       "years": 10.666666666666666,
-      "zero_annual": 0.051759390334856104,
+      "zero_annual": 0.05163411209292845,
       "is_pillar": false
     },
     {
       "years": 10.75,
-      "zero_annual": 0.05184863635497261,
+      "zero_annual": 0.05172358634269347,
       "is_pillar": false
     },
     {
       "years": 10.833333333333334,
-      "zero_annual": 0.051936516758413376,
+      "zero_annual": 0.05181169150333509,
       "is_pillar": false
     },
     {
       "years": 10.916666666666666,
-      "zero_annual": 0.05202306265129253,
+      "zero_annual": 0.0518984587596123,
       "is_pillar": false
     },
     {
       "years": 11.0,
-      "zero_annual": 0.052108304202135525,
+      "zero_annual": 0.051983918356338865,
       "is_pillar": false
     },
     {
       "years": 11.083333333333334,
-      "zero_annual": 0.05219227067694043,
+      "zero_annual": 0.05206809963353187,
       "is_pillar": false
     },
     {
       "years": 11.166666666666666,
-      "zero_annual": 0.05227499047267736,
+      "zero_annual": 0.05215103105999441,
       "is_pillar": false
     },
     {
       "years": 11.25,
-      "zero_annual": 0.05235649114930574,
+      "zero_annual": 0.05223274026541436,
       "is_pillar": false
     },
     {
       "years": 11.333333333333334,
-      "zero_annual": 0.05243679946038937,
+      "zero_annual": 0.052313254071053805,
       "is_pillar": false
     },
     {
       "years": 11.416666666666666,
-      "zero_annual": 0.05251594138237348,
+      "zero_annual": 0.05239259851910161,
       "is_pillar": false
     },
     {
       "years": 11.5,
-      "zero_annual": 0.05259394214259916,
+      "zero_annual": 0.05247079890075623,
       "is_pillar": false
     },
     {
       "years": 11.583333333333334,
-      "zero_annual": 0.05267082624611219,
+      "zero_annual": 0.05254787978310249,
       "is_pillar": false
     },
     {
       "years": 11.666666666666666,
-      "zero_annual": 0.052746617501329585,
+      "zero_annual": 0.052623865034842954,
       "is_pillar": false
     },
     {
       "years": 11.75,
-      "zero_annual": 0.05282133904461972,
+      "zero_annual": 0.052698777850937795,
       "is_pillar": false
     },
     {
       "years": 11.833333333333334,
-      "zero_annual": 0.052895013363848165,
+      "zero_annual": 0.05277264077621169,
       "is_pillar": false
     },
     {
       "years": 11.916666666666666,
-      "zero_annual": 0.05296766232094163,
+      "zero_annual": 0.05284547572797327,
       "is_pillar": false
     },
     {
       "years": 12.0,
-      "zero_annual": 0.05303930717351557,
+      "zero_annual": 0.05291730401769601,
       "is_pillar": false
     },
     {
       "years": 12.083333333333334,
-      "zero_annual": 0.05310996859561001,
+      "zero_annual": 0.05298814637180849,
       "is_pillar": false
     },
     {
       "years": 12.166666666666666,
-      "zero_annual": 0.05317966669758101,
+      "zero_annual": 0.05305802295163331,
       "is_pillar": false
     },
     {
       "years": 12.25,
-      "zero_annual": 0.05324842104517935,
+      "zero_annual": 0.05312695337251516,
       "is_pillar": false
     },
     {
       "years": 12.333333333333334,
-      "zero_annual": 0.05331625067786394,
+      "zero_annual": 0.05319495672217878,
       "is_pillar": false
     },
     {
       "years": 12.416666666666666,
-      "zero_annual": 0.053383174126377275,
+      "zero_annual": 0.05326205157835062,
       "is_pillar": false
     },
     {
       "years": 12.5,
-      "zero_annual": 0.05344920942962439,
+      "zero_annual": 0.053328256025678034,
       "is_pillar": false
     },
     {
       "years": 12.583333333333334,
-      "zero_annual": 0.05351437415088278,
+      "zero_annual": 0.05339358767198088,
       "is_pillar": false
     },
     {
       "years": 12.666666666666666,
-      "zero_annual": 0.05357868539337507,
+      "zero_annual": 0.053458063663862854,
       "is_pillar": false
     },
     {
       "years": 12.75,
-      "zero_annual": 0.05364215981523457,
+      "zero_annual": 0.05352170070171547,
       "is_pillar": false
     },
     {
       "years": 12.833333333333334,
-      "zero_annual": 0.053704813643890015,
+      "zero_annual": 0.053584515054138526,
       "is_pillar": false
     },
     {
       "years": 12.916666666666666,
-      "zero_annual": 0.05376666268989716,
+      "zero_annual": 0.053646522571805466,
       "is_pillar": false
     },
     {
       "years": 13.0,
-      "zero_annual": 0.05382772236023792,
+      "zero_annual": 0.05370773870079759,
       "is_pillar": false
     },
     {
       "years": 13.083333333333334,
-      "zero_annual": 0.053888007671117455,
+      "zero_annual": 0.053768178495431806,
       "is_pillar": false
     },
     {
       "years": 13.166666666666666,
-      "zero_annual": 0.053947533260273905,
+      "zero_annual": 0.05382785663060252,
       "is_pillar": false
     },
     {
       "years": 13.25,
-      "zero_annual": 0.05400631339882822,
+      "zero_annual": 0.053886787413660375,
       "is_pillar": false
     },
     {
       "years": 13.333333333333334,
-      "zero_annual": 0.054064362002689936,
+      "zero_annual": 0.053944984795847306,
       "is_pillar": false
     },
     {
       "years": 13.416666666666666,
-      "zero_annual": 0.05412169264354061,
+      "zero_annual": 0.05400246238330708,
       "is_pillar": false
     },
     {
       "years": 13.5,
-      "zero_annual": 0.0541783185594118,
+      "zero_annual": 0.05405923344769015,
       "is_pillar": false
     },
     {
       "years": 13.583333333333334,
-      "zero_annual": 0.054234252664875804,
+      "zero_annual": 0.054115310936370786,
       "is_pillar": false
     },
     {
       "years": 13.666666666666666,
-      "zero_annual": 0.054289507560864925,
+      "zero_annual": 0.054170707482288805,
       "is_pillar": false
     },
     {
       "years": 13.75,
-      "zero_annual": 0.054344095544134996,
+      "zero_annual": 0.05422543541343994,
       "is_pillar": false
     },
     {
       "years": 13.833333333333334,
-      "zero_annual": 0.054398028616388316,
+      "zero_annual": 0.0542795067620192,
       "is_pillar": false
     },
     {
       "years": 13.916666666666666,
-      "zero_annual": 0.054451318493071055,
+      "zero_annual": 0.054332933273241624,
       "is_pillar": false
     },
     {
       "years": 14.0,
-      "zero_annual": 0.054503976611856464,
+      "zero_annual": 0.05438572641384676,
       "is_pillar": false
     },
     {
       "years": 14.083333333333334,
-      "zero_annual": 0.05455601414082856,
+      "zero_annual": 0.05443789738030347,
       "is_pillar": false
     },
     {
       "years": 14.166666666666666,
-      "zero_annual": 0.05460744198637957,
+      "zero_annual": 0.05448945710672515,
       "is_pillar": false
     },
     {
       "years": 14.25,
-      "zero_annual": 0.05465827080082919,
+      "zero_annual": 0.05454041627251094,
       "is_pillar": false
     },
     {
       "years": 14.333333333333334,
-      "zero_annual": 0.054708510989780246,
+      "zero_annual": 0.05459078530971828,
       "is_pillar": false
     },
     {
       "years": 14.416666666666666,
-      "zero_annual": 0.05475817271922123,
+      "zero_annual": 0.05464057441018366,
       "is_pillar": false
     },
     {
       "years": 14.5,
-      "zero_annual": 0.05480726592238239,
+      "zero_annual": 0.054689793532396225,
       "is_pillar": false
     },
     {
       "years": 14.583333333333334,
-      "zero_annual": 0.054855800306360836,
+      "zero_annual": 0.05473845240813935,
       "is_pillar": false
     },
     {
       "years": 14.666666666666666,
-      "zero_annual": 0.05490378535851814,
+      "zero_annual": 0.05478656054890374,
       "is_pillar": false
     },
     {
       "years": 14.75,
-      "zero_annual": 0.054951230352662694,
+      "zero_annual": 0.05483412725208758,
       "is_pillar": false
     },
     {
       "years": 14.833333333333334,
-      "zero_annual": 0.05499814435502559,
+      "zero_annual": 0.05488116160698464,
       "is_pillar": false
     },
     {
       "years": 14.916666666666666,
-      "zero_annual": 0.05504453623003536,
+      "zero_annual": 0.0549276725005754,
       "is_pillar": false
     },
     {
       "years": 15.0,
-      "zero_annual": 0.05509041464590214,
+      "zero_annual": 0.054973668623124805,
       "is_pillar": false
     },
     {
       "years": 15.083333333333334,
-      "zero_annual": 0.05513578808001629,
+      "zero_annual": 0.05501915847359484,
       "is_pillar": false
     },
     {
       "years": 15.166666666666666,
-      "zero_annual": 0.05518066482417172,
+      "zero_annual": 0.05506415036487966,
       "is_pillar": false
     },
     {
       "years": 15.25,
-      "zero_annual": 0.055225052989615886,
+      "zero_annual": 0.05510865242887042,
       "is_pillar": false
     },
     {
       "years": 15.333333333333334,
-      "zero_annual": 0.0552689605119383,
+      "zero_annual": 0.055152672621354704,
       "is_pillar": false
     },
     {
       "years": 15.416666666666666,
-      "zero_annual": 0.05531239515579922,
+      "zero_annual": 0.05519621872675784,
       "is_pillar": false
     },
     {
       "years": 15.5,
-      "zero_annual": 0.05535536451950773,
+      "zero_annual": 0.05523929836273167,
       "is_pillar": false
     },
     {
       "years": 15.583333333333334,
-      "zero_annual": 0.055397876039452454,
+      "zero_annual": 0.05528191898459767,
       "is_pillar": false
     },
     {
       "years": 15.666666666666666,
-      "zero_annual": 0.055439936994392314,
+      "zero_annual": 0.05532408788964727,
       "is_pillar": false
     },
     {
       "years": 15.75,
-      "zero_annual": 0.055481554509610786,
+      "zero_annual": 0.05536581222130743,
       "is_pillar": false
     },
     {
       "years": 15.833333333333334,
-      "zero_annual": 0.055522735560939784,
+      "zero_annual": 0.05540709897317475,
       "is_pillar": false
     },
     {
       "years": 15.916666666666666,
-      "zero_annual": 0.05556348697865743,
+      "zero_annual": 0.055447954992922766,
       "is_pillar": false
     },
     {
       "years": 16.0,
-      "zero_annual": 0.05560381545126569,
+      "zero_annual": 0.05548838698608871,
       "is_pillar": false
     },
     {
       "years": 16.083333333333332,
-      "zero_annual": 0.055643727529147924,
+      "zero_annual": 0.055528401519741255,
       "is_pillar": false
     },
     {
       "years": 16.166666666666668,
-      "zero_annual": 0.055683229628118225,
+      "zero_annual": 0.05556800502603787,
       "is_pillar": false
     },
     {
       "years": 16.25,
-      "zero_annual": 0.05572232803285715,
+      "zero_annual": 0.055607203805670746,
       "is_pillar": false
     },
     {
       "years": 16.333333333333332,
-      "zero_annual": 0.05576102890024637,
+      "zero_annual": 0.055646004031207674,
       "is_pillar": false
     },
     {
       "years": 16.416666666666668,
-      "zero_annual": 0.05579933826260075,
+      "zero_annual": 0.055684411750333895,
       "is_pillar": false
     },
     {
       "years": 16.5,
-      "zero_annual": 0.05583726203080186,
+      "zero_annual": 0.055722432888993145,
       "is_pillar": false
     },
     {
       "years": 16.583333333333332,
-      "zero_annual": 0.05587480599733907,
+      "zero_annual": 0.05576007325443655,
       "is_pillar": false
     },
     {
       "years": 16.666666666666668,
-      "zero_annual": 0.055911975839258776,
+      "zero_annual": 0.05579733853817892,
       "is_pillar": false
     },
     {
       "years": 16.75,
-      "zero_annual": 0.05594877712102586,
+      "zero_annual": 0.055834234318867804,
       "is_pillar": false
     },
     {
       "years": 16.833333333333332,
-      "zero_annual": 0.05598521529730083,
+      "zero_annual": 0.05587076606506769,
       "is_pillar": false
     },
     {
       "years": 16.916666666666668,
-      "zero_annual": 0.05602129571563541,
+      "zero_annual": 0.05590693913796163,
       "is_pillar": false
     },
     {
       "years": 17.0,
-      "zero_annual": 0.056057023619087376,
+      "zero_annual": 0.05594275879397426,
       "is_pillar": false
     },
     {
       "years": 17.083333333333332,
-      "zero_annual": 0.056092404148762265,
+      "zero_annual": 0.05597823018731818,
       "is_pillar": false
     },
     {
       "years": 17.166666666666668,
-      "zero_annual": 0.05612744234627831,
+      "zero_annual": 0.056013358372466016,
       "is_pillar": false
     },
     {
       "years": 17.25,
-      "zero_annual": 0.05616214315616119,
+      "zero_annual": 0.05604814830655225,
       "is_pillar": false
     },
     {
       "years": 17.333333333333332,
-      "zero_annual": 0.05619651142817084,
+      "zero_annual": 0.0560826048517038,
       "is_pillar": false
     },
     {
       "years": 17.416666666666668,
-      "zero_annual": 0.05623055191956117,
+      "zero_annual": 0.05611673277730622,
       "is_pillar": false
     },
     {
       "years": 17.5,
-      "zero_annual": 0.056264269297273906,
+      "zero_annual": 0.056150536762204384,
       "is_pillar": false
     },
     {
       "years": 17.583333333333332,
-      "zero_annual": 0.05629766814007242,
+      "zero_annual": 0.05618402139684031,
       "is_pillar": false
     },
     {
       "years": 17.666666666666668,
-      "zero_annual": 0.05633075294061518,
+      "zero_annual": 0.05621719118533175,
       "is_pillar": false
     },
     {
       "years": 17.75,
-      "zero_annual": 0.05636352810746881,
+      "zero_annual": 0.05625005054749166,
       "is_pillar": false
     },
     {
       "years": 17.833333333333332,
-      "zero_annual": 0.0563959979670674,
+      "zero_annual": 0.05628260382079109,
       "is_pillar": false
     },
     {
       "years": 17.916666666666668,
-      "zero_annual": 0.05642816676561613,
+      "zero_annual": 0.05631485526226876,
       "is_pillar": false
     },
     {
       "years": 18.0,
-      "zero_annual": 0.0564600386709424,
+      "zero_annual": 0.05634680905038558,
       "is_pillar": false
     },
     {
       "years": 18.083333333333332,
-      "zero_annual": 0.05649161777429579,
+      "zero_annual": 0.05637846928683077,
       "is_pillar": false
     },
     {
       "years": 18.166666666666668,
-      "zero_annual": 0.05652290809209903,
+      "zero_annual": 0.056409839998275535,
       "is_pillar": false
     },
     {
       "years": 18.25,
-      "zero_annual": 0.05655391356765005,
+      "zero_annual": 0.0564409251380813,
       "is_pillar": false
     },
     {
       "years": 18.333333333333332,
-      "zero_annual": 0.056584638072780136,
+      "zero_annual": 0.056471728587960124,
       "is_pillar": false
     },
     {
       "years": 18.416666666666668,
-      "zero_annual": 0.05661508540946425,
+      "zero_annual": 0.05650225415959076,
       "is_pillar": false
     },
     {
       "years": 18.5,
-      "zero_annual": 0.056645259311390195,
+      "zero_annual": 0.05653250559619072,
       "is_pillar": false
     },
     {
       "years": 18.583333333333332,
-      "zero_annual": 0.05667516344548429,
+      "zero_annual": 0.05656248657404639,
       "is_pillar": false
     },
     {
       "years": 18.666666666666668,
-      "zero_annual": 0.05670480141339751,
+      "zero_annual": 0.05659220070400295,
       "is_pillar": false
     },
     {
       "years": 18.75,
-      "zero_annual": 0.056734176752951226,
+      "zero_annual": 0.056621651532912765,
       "is_pillar": false
     },
     {
       "years": 18.833333333333332,
-      "zero_annual": 0.05676329293954496,
+      "zero_annual": 0.056650842545048485,
       "is_pillar": false
     },
     {
       "years": 18.916666666666668,
-      "zero_annual": 0.0567921533875273,
+      "zero_annual": 0.05667977716347594,
       "is_pillar": false
     },
     {
       "years": 19.0,
-      "zero_annual": 0.05682076145152992,
+      "zero_annual": 0.056708458751391966,
       "is_pillar": false
     },
     {
       "years": 19.083333333333332,
-      "zero_annual": 0.056849120427768574,
+      "zero_annual": 0.05673689061342935,
       "is_pillar": false
     },
     {
       "years": 19.166666666666668,
-      "zero_annual": 0.05687723355530783,
+      "zero_annual": 0.05676507599692382,
       "is_pillar": false
     },
     {
       "years": 19.25,
-      "zero_annual": 0.05690510401729565,
+      "zero_annual": 0.05679301809315218,
       "is_pillar": false
     },
     {
       "years": 19.333333333333332,
-      "zero_annual": 0.056932734942163554,
+      "zero_annual": 0.056820720038535555,
       "is_pillar": false
     },
     {
       "years": 19.416666666666668,
-      "zero_annual": 0.056960129404798554,
+      "zero_annual": 0.05684818491581445,
       "is_pillar": false
     },
     {
       "years": 19.5,
-      "zero_annual": 0.05698729042768269,
+      "zero_annual": 0.056875415755190506,
       "is_pillar": false
     },
     {
       "years": 19.583333333333332,
-      "zero_annual": 0.05701422098200526,
+      "zero_annual": 0.05690241553544251,
       "is_pillar": false
     },
     {
       "years": 19.666666666666668,
-      "zero_annual": 0.05704092398874616,
+      "zero_annual": 0.056929187185012164,
       "is_pillar": false
     },
     {
       "years": 19.75,
-      "zero_annual": 0.057067402319732397,
+      "zero_annual": 0.05695573358306216,
       "is_pillar": false
     },
     {
       "years": 19.833333333333332,
-      "zero_annual": 0.05709365879866701,
+      "zero_annual": 0.056982057560509336,
       "is_pillar": false
     },
     {
       "years": 19.916666666666668,
-      "zero_annual": 0.0571196962021332,
+      "zero_annual": 0.057008161901030974,
       "is_pillar": false
     },
     {
       "years": 20.0,
-      "zero_annual": 0.05714551726057304,
+      "zero_annual": 0.05703404934204559,
       "is_pillar": true
     },
     {
       "years": 20.083333333333332,
-      "zero_annual": 0.05709089684795399,
+      "zero_annual": 0.05697951905791565,
       "is_pillar": false
     },
     {
       "years": 20.166666666666668,
-      "zero_annual": 0.05703673063093362,
+      "zero_annual": 0.0569254422156229,
       "is_pillar": false
     },
     {
       "years": 20.25,
-      "zero_annual": 0.05698301296774977,
+      "zero_annual": 0.056871813182821196,
       "is_pillar": false
     },
     {
       "years": 20.333333333333332,
-      "zero_annual": 0.05692973830969206,
+      "zero_annual": 0.05681862642005964,
       "is_pillar": false
     },
     {
       "years": 20.416666666666668,
-      "zero_annual": 0.056876901199191865,
+      "zero_annual": 0.05676587647887632,
       "is_pillar": false
     },
     {
       "years": 20.5,
-      "zero_annual": 0.05682449626795827,
+      "zero_annual": 0.056713557999936715,
       "is_pillar": false
     },
     {
       "years": 20.583333333333332,
-      "zero_annual": 0.0567725182351595,
+      "zero_annual": 0.05666166571122022,
       "is_pillar": false
     },
     {
       "years": 20.666666666666668,
-      "zero_annual": 0.05672096190565057,
+      "zero_annual": 0.05661019442624715,
       "is_pillar": false
     },
     {
       "years": 20.75,
-      "zero_annual": 0.0566698221682409,
+      "zero_annual": 0.05655913904235277,
       "is_pillar": false
     },
     {
       "years": 20.833333333333332,
-      "zero_annual": 0.05661909399400544,
+      "zero_annual": 0.0565084945390002,
       "is_pillar": false
     },
     {
       "years": 20.916666666666668,
-      "zero_annual": 0.056568772434637093,
+      "zero_annual": 0.056458255976134186,
       "is_pillar": false
     },
     {
       "years": 21.0,
-      "zero_annual": 0.05651885262083711,
+      "zero_annual": 0.05640841849257616,
       "is_pillar": false
     },
     {
       "years": 21.083333333333332,
-      "zero_annual": 0.05646932976074459,
+      "zero_annual": 0.05635897730445527,
       "is_pillar": false
     },
     {
       "years": 21.166666666666668,
-      "zero_annual": 0.056420199138403015,
+      "zero_annual": 0.05630992770367782,
       "is_pillar": false
     },
     {
       "years": 21.25,
-      "zero_annual": 0.056371456112263685,
+      "zero_annual": 0.05626126505643314,
       "is_pillar": false
     },
     {
       "years": 21.333333333333332,
-      "zero_annual": 0.056323096113723325,
+      "zero_annual": 0.05621298480173431,
       "is_pillar": false
     },
     {
       "years": 21.416666666666668,
-      "zero_annual": 0.056275114645697455,
+      "zero_annual": 0.05616508244999263,
       "is_pillar": false
     },
     {
       "years": 21.5,
-      "zero_annual": 0.056227507281226385,
+      "zero_annual": 0.05611755358162651,
       "is_pillar": false
     },
     {
       "years": 21.583333333333332,
-      "zero_annual": 0.05618026966211276,
+      "zero_annual": 0.05607039384570234,
       "is_pillar": false
     },
     {
       "years": 21.666666666666668,
-      "zero_annual": 0.05613339749759261,
+      "zero_annual": 0.056023598958606424,
       "is_pillar": false
     },
     {
       "years": 21.75,
-      "zero_annual": 0.05608688656303573,
+      "zero_annual": 0.05597716470274827,
       "is_pillar": false
     },
     {
       "years": 21.833333333333332,
-      "zero_annual": 0.05604073269867671,
+      "zero_annual": 0.05593108692529292,
       "is_pillar": false
     },
     {
       "years": 21.916666666666668,
-      "zero_annual": 0.05599493180837434,
+      "zero_annual": 0.055885361536923917,
       "is_pillar": false
     },
     {
       "years": 22.0,
-      "zero_annual": 0.05594947985840015,
+      "zero_annual": 0.055839984510632545,
       "is_pillar": false
     },
     {
       "years": 22.083333333333332,
-      "zero_annual": 0.05590437287625449,
+      "zero_annual": 0.05579495188053607,
       "is_pillar": false
     },
     {
       "years": 22.166666666666668,
-      "zero_annual": 0.05585960694950831,
+      "zero_annual": 0.055750259740722674,
       "is_pillar": false
     },
     {
       "years": 22.25,
-      "zero_annual": 0.05581517822467297,
+      "zero_annual": 0.055705904244121696,
       "is_pillar": false
     },
     {
       "years": 22.333333333333332,
-      "zero_annual": 0.05577108290609378,
+      "zero_annual": 0.0556618816013994,
       "is_pillar": false
     },
     {
       "years": 22.416666666666668,
-      "zero_annual": 0.05572731725486957,
+      "zero_annual": 0.05561818807988117,
       "is_pillar": false
     },
     {
       "years": 22.5,
-      "zero_annual": 0.055683877587795694,
+      "zero_annual": 0.05557482000249503,
       "is_pillar": false
     },
     {
       "years": 22.583333333333332,
-      "zero_annual": 0.05564076027633069,
+      "zero_annual": 0.05553177374674112,
       "is_pillar": false
     },
     {
       "years": 22.666666666666668,
-      "zero_annual": 0.055597961745585955,
+      "zero_annual": 0.05548904574368296,
       "is_pillar": false
     },
     {
       "years": 22.75,
-      "zero_annual": 0.05555547847333808,
+      "zero_annual": 0.05544663247696047,
       "is_pillar": false
     },
     {
       "years": 22.833333333333332,
-      "zero_annual": 0.05551330698906232,
+      "zero_annual": 0.05540453048182603,
       "is_pillar": false
     },
     {
       "years": 22.916666666666668,
-      "zero_annual": 0.05547144387298775,
+      "zero_annual": 0.05536273634420086,
       "is_pillar": false
     },
     {
       "years": 23.0,
-      "zero_annual": 0.05542988575517205,
+      "zero_annual": 0.05532124669975169,
       "is_pillar": false
     },
     {
       "years": 23.083333333333332,
-      "zero_annual": 0.05538862931459865,
+      "zero_annual": 0.05528005823298909,
       "is_pillar": false
     },
     {
       "years": 23.166666666666668,
-      "zero_annual": 0.055347671278290766,
+      "zero_annual": 0.05523916767638282,
       "is_pillar": false
     },
     {
       "years": 23.25,
-      "zero_annual": 0.05530700842044678,
+      "zero_annual": 0.055198571809499164,
       "is_pillar": false
     },
     {
       "years": 23.333333333333332,
-      "zero_annual": 0.05526663756159289,
+      "zero_annual": 0.05515826745815455,
       "is_pillar": false
     },
     {
       "years": 23.416666666666668,
-      "zero_annual": 0.05522655556775424,
+      "zero_annual": 0.05511825149358862,
       "is_pillar": false
     },
     {
       "years": 23.5,
-      "zero_annual": 0.055186759349644676,
+      "zero_annual": 0.05507852083165443,
       "is_pillar": false
     },
     {
       "years": 23.583333333333332,
-      "zero_annual": 0.055147245861872474,
+      "zero_annual": 0.05503907243202666,
       "is_pillar": false
     },
     {
       "years": 23.666666666666668,
-      "zero_annual": 0.05510801210216343,
+      "zero_annual": 0.05499990329742532,
       "is_pillar": false
     },
     {
       "years": 23.75,
-      "zero_annual": 0.055069055110601006,
+      "zero_annual": 0.05496101047285662,
       "is_pillar": false
     },
     {
       "years": 23.833333333333332,
-      "zero_annual": 0.055030371968881164,
+      "zero_annual": 0.054922391044871066,
       "is_pillar": false
     },
     {
       "years": 23.916666666666668,
-      "zero_annual": 0.05499195979958427,
+      "zero_annual": 0.05488404214083431,
       "is_pillar": false
     },
     {
       "years": 24.0,
-      "zero_annual": 0.0549538157654621,
+      "zero_annual": 0.0548459609282157,
       "is_pillar": false
     },
     {
       "years": 24.083333333333332,
-      "zero_annual": 0.05491593706873754,
+      "zero_annual": 0.054808144613891496,
       "is_pillar": false
     },
     {
       "years": 24.166666666666668,
-      "zero_annual": 0.054878320950422665,
+      "zero_annual": 0.054770590443460554,
       "is_pillar": false
     },
     {
       "years": 24.25,
-      "zero_annual": 0.0548409646896475,
+      "zero_annual": 0.054733295700577056,
       "is_pillar": false
     },
     {
       "years": 24.333333333333332,
-      "zero_annual": 0.054803865603003876,
+      "zero_annual": 0.05469625770629416,
       "is_pillar": false
     },
     {
       "years": 24.416666666666668,
-      "zero_annual": 0.05476702104390396,
+      "zero_annual": 0.05465947381842384,
       "is_pillar": false
     },
     {
       "years": 24.5,
-      "zero_annual": 0.05473042840195008,
+      "zero_annual": 0.05462294143090762,
       "is_pillar": false
     },
     {
       "years": 24.583333333333332,
-      "zero_annual": 0.054694085102318324,
+      "zero_annual": 0.054586657973201946,
       "is_pillar": false
     },
     {
       "years": 24.666666666666668,
-      "zero_annual": 0.05465798860515547,
+      "zero_annual": 0.05455062090967444,
       "is_pillar": false
     },
     {
       "years": 24.75,
-      "zero_annual": 0.05462213640498548,
+      "zero_annual": 0.05451482773901373,
       "is_pillar": false
     },
     {
       "years": 24.833333333333332,
-      "zero_annual": 0.0545865260301317,
+      "zero_annual": 0.054479275993650766,
       "is_pillar": false
     },
     {
       "years": 24.916666666666668,
-      "zero_annual": 0.0545511550421478,
+      "zero_annual": 0.05444396323919154,
       "is_pillar": false
     },
     {
       "years": 25.0,
-      "zero_annual": 0.05451602103526154,
+      "zero_annual": 0.05440888707386127,
       "is_pillar": false
     },
     {
       "years": 25.083333333333332,
-      "zero_annual": 0.05448112163582941,
+      "zero_annual": 0.0543740451279604,
       "is_pillar": false
     },
     {
       "years": 25.166666666666668,
-      "zero_annual": 0.054446454501801744,
+      "zero_annual": 0.05433943506333083,
       "is_pillar": false
     },
     {
       "years": 25.25,
-      "zero_annual": 0.05441201732219891,
+      "zero_annual": 0.05430505457283252,
       "is_pillar": false
     },
     {
       "years": 25.333333333333332,
-      "zero_annual": 0.054377807816597956,
+      "zero_annual": 0.054270901379830594,
       "is_pillar": false
     },
     {
       "years": 25.416666666666668,
-      "zero_annual": 0.054343823734629204,
+      "zero_annual": 0.054236973237694164,
       "is_pillar": false
     },
     {
       "years": 25.5,
-      "zero_annual": 0.0543100628554829,
+      "zero_annual": 0.05420326792930186,
       "is_pillar": false
     },
     {
       "years": 25.583333333333332,
-      "zero_annual": 0.054276522987425135,
+      "zero_annual": 0.05416978326656041,
       "is_pillar": false
     },
     {
       "years": 25.666666666666668,
-      "zero_annual": 0.05424320196732335,
+      "zero_annual": 0.054136517089930614,
       "is_pillar": false
     },
     {
       "years": 25.75,
-      "zero_annual": 0.05421009766018248,
+      "zero_annual": 0.054103467267962335,
       "is_pillar": false
     },
     {
       "years": 25.833333333333332,
-      "zero_annual": 0.05417720795868752,
+      "zero_annual": 0.054070631696840676,
       "is_pillar": false
     },
     {
       "years": 25.916666666666668,
-      "zero_annual": 0.05414453078275705,
+      "zero_annual": 0.054038008299938545,
       "is_pillar": false
     },
     {
       "years": 26.0,
-      "zero_annual": 0.05411206407910507,
+      "zero_annual": 0.05400559502737923,
       "is_pillar": false
     },
     {
       "years": 26.083333333333332,
-      "zero_annual": 0.054079805820809845,
+      "zero_annual": 0.053973389855606735,
       "is_pillar": false
     },
     {
       "years": 26.166666666666668,
-      "zero_annual": 0.05404775400689377,
+      "zero_annual": 0.05394139078696525,
       "is_pillar": false
     },
     {
       "years": 26.25,
-      "zero_annual": 0.0540159066619077,
+      "zero_annual": 0.053909595849285896,
       "is_pillar": false
     },
     {
       "years": 26.333333333333332,
-      "zero_annual": 0.053984261835526404,
+      "zero_annual": 0.05387800309548085,
       "is_pillar": false
     },
     {
       "years": 26.416666666666668,
-      "zero_annual": 0.05395281760214998,
+      "zero_annual": 0.05384661060314744,
       "is_pillar": false
     },
     {
       "years": 26.5,
-      "zero_annual": 0.053921572060513734,
+      "zero_annual": 0.0538154164741762,
       "is_pillar": false
     },
     {
       "years": 26.583333333333332,
-      "zero_annual": 0.05389052333330402,
+      "zero_annual": 0.05378441883437013,
       "is_pillar": false
     },
     {
       "years": 26.666666666666668,
-      "zero_annual": 0.05385966956678345,
+      "zero_annual": 0.05375361583306848,
       "is_pillar": false
     },
     {
       "years": 26.75,
-      "zero_annual": 0.053829008930420974,
+      "zero_annual": 0.05372300564277799,
       "is_pillar": false
     },
     {
       "years": 26.833333333333332,
-      "zero_annual": 0.05379853961653014,
+      "zero_annual": 0.053692586458812475,
       "is_pillar": false
     },
     {
       "years": 26.916666666666668,
-      "zero_annual": 0.05376825983991407,
+      "zero_annual": 0.053662356498938024,
       "is_pillar": false
     },
     {
       "years": 27.0,
-      "zero_annual": 0.05373816783751728,
+      "zero_annual": 0.05363231400302415,
       "is_pillar": false
     },
     {
       "years": 27.083333333333332,
-      "zero_annual": 0.05370826186808175,
+      "zero_annual": 0.05360245723270274,
       "is_pillar": false
     },
     {
       "years": 27.166666666666668,
-      "zero_annual": 0.0536785402118134,
+      "zero_annual": 0.05357278447103253,
       "is_pillar": false
     },
     {
       "years": 27.25,
-      "zero_annual": 0.053649001170050115,
+      "zero_annual": 0.05354329402217051,
       "is_pillar": false
     },
     {
       "years": 27.333333333333332,
-      "zero_annual": 0.05361964306494027,
+      "zero_annual": 0.05351398421104814,
       "is_pillar": false
     },
     {
       "years": 27.416666666666668,
-      "zero_annual": 0.05359046423912317,
+      "zero_annual": 0.05348485338305475,
       "is_pillar": false
     },
     {
       "years": 27.5,
-      "zero_annual": 0.05356146305541887,
+      "zero_annual": 0.05345589990372601,
       "is_pillar": false
     },
     {
       "years": 27.583333333333332,
-      "zero_annual": 0.053532637896520185,
+      "zero_annual": 0.05342712215843748,
       "is_pillar": false
     },
     {
       "years": 27.666666666666668,
-      "zero_annual": 0.05350398716469362,
+      "zero_annual": 0.0533985185521062,
       "is_pillar": false
     },
     {
       "years": 27.75,
-      "zero_annual": 0.05347550928148337,
+      "zero_annual": 0.05337008750889449,
       "is_pillar": false
     },
     {
       "years": 27.833333333333332,
-      "zero_annual": 0.05344720268742176,
+      "zero_annual": 0.053341827471920844,
       "is_pillar": false
     },
     {
       "years": 27.916666666666668,
-      "zero_annual": 0.05341906584174416,
+      "zero_annual": 0.05331373690297592,
       "is_pillar": false
     },
     {
       "years": 28.0,
-      "zero_annual": 0.053391097222109885,
+      "zero_annual": 0.053285814282244104,
       "is_pillar": false
     },
     {
       "years": 28.083333333333332,
-      "zero_annual": 0.05336329532432749,
+      "zero_annual": 0.05325805810802797,
       "is_pillar": false
     },
     {
       "years": 28.166666666666668,
-      "zero_annual": 0.053335658662085006,
+      "zero_annual": 0.053230466896480255,
       "is_pillar": false
     },
     {
       "years": 28.25,
-      "zero_annual": 0.05330818576668506,
+      "zero_annual": 0.05320303918133895,
       "is_pillar": false
     },
     {
       "years": 28.333333333333332,
-      "zero_annual": 0.053280875186784815,
+      "zero_annual": 0.05317577351366798,
       "is_pillar": false
     },
     {
       "years": 28.416666666666668,
-      "zero_annual": 0.053253725488140446,
+      "zero_annual": 0.053148668461601156,
       "is_pillar": false
     },
     {
       "years": 28.5,
-      "zero_annual": 0.05322673525335597,
+      "zero_annual": 0.053121722610092625,
       "is_pillar": false
     },
     {
       "years": 28.583333333333332,
-      "zero_annual": 0.05319990308163658,
+      "zero_annual": 0.053094934560669715,
       "is_pillar": false
     },
     {
       "years": 28.666666666666668,
-      "zero_annual": 0.05317322758854659,
+      "zero_annual": 0.05306830293119158,
       "is_pillar": false
     },
     {
       "years": 28.75,
-      "zero_annual": 0.05314670740577032,
+      "zero_annual": 0.05304182635561139,
       "is_pillar": false
     },
     {
       "years": 28.833333333333332,
-      "zero_annual": 0.053120341180879604,
+      "zero_annual": 0.05301550348374229,
       "is_pillar": false
     },
     {
       "years": 28.916666666666668,
-      "zero_annual": 0.05309412757710308,
+      "zero_annual": 0.0529893329810287,
       "is_pillar": false
     },
     {
       "years": 29.0,
-      "zero_annual": 0.05306806527310015,
+      "zero_annual": 0.052963313528320066,
       "is_pillar": false
     },
     {
       "years": 29.083333333333332,
-      "zero_annual": 0.053042152962739175,
+      "zero_annual": 0.052937443821649666,
       "is_pillar": false
     },
     {
       "years": 29.166666666666668,
-      "zero_annual": 0.0530163893548794,
+      "zero_annual": 0.052911722572016595,
       "is_pillar": false
     },
     {
       "years": 29.25,
-      "zero_annual": 0.05299077317315626,
+      "zero_annual": 0.05288614850517126,
       "is_pillar": false
     },
     {
       "years": 29.333333333333332,
-      "zero_annual": 0.05296530315577064,
+      "zero_annual": 0.05286072036140599,
       "is_pillar": false
     },
     {
       "years": 29.416666666666668,
-      "zero_annual": 0.05293997805528239,
+      "zero_annual": 0.05283543689534698,
       "is_pillar": false
     },
     {
       "years": 29.5,
-      "zero_annual": 0.05291479663840537,
+      "zero_annual": 0.05281029687575223,
       "is_pillar": false
     },
     {
       "years": 29.583333333333332,
-      "zero_annual": 0.05288975768580806,
+      "zero_annual": 0.0527852990853106,
       "is_pillar": false
     },
     {
       "years": 29.666666666666668,
-      "zero_annual": 0.052864859991917035,
+      "zero_annual": 0.052760442320445744,
       "is_pillar": false
     },
     {
       "years": 29.75,
-      "zero_annual": 0.052840102364722474,
+      "zero_annual": 0.052735725391123145,
       "is_pillar": false
     },
     {
       "years": 29.833333333333332,
-      "zero_annual": 0.05281548362558941,
+      "zero_annual": 0.05271114712065983,
       "is_pillar": false
     },
     {
       "years": 29.916666666666668,
-      "zero_annual": 0.05279100260906877,
+      "zero_annual": 0.05268670634553829,
       "is_pillar": false
     },
     {
       "years": 30.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": true
     },
     {
       "years": 30.083333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.166666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.333333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.416666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.583333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.666666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.833333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 30.916666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.083333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.166666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.333333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.416666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.583333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.666666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.833333333333332,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 31.916666666666668,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 32.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 33.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 34.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 35.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 36.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 37.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 38.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.083333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.166666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.25,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.333333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.416666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.5,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.583333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.666666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.75,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.833333333333336,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 39.916666666666664,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     },
     {
       "years": 40.0,
-      "zero_annual": 0.052766658162715085,
+      "zero_annual": 0.05266240191522176,
       "is_pillar": false
     }
   ],
