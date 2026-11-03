@@ -69,8 +69,26 @@ NAKED_CALL_MARGIN_RATE = 0.20
 NAKED_CALL_MARGIN_FLOOR = 0.10
 
 # Closing a par-strike call in expiry week costs at most one $0.05 tick: under the
-# pinned-at-par thesis that is the only window in which it can be assigned.
+# pinned-at-par thesis that is the only window in which it can be assigned. STRC options
+# quote in nickels, so $0.05 is also the floor.
 PINNED_BUYBACK = 0.05
+# Per contract, per leg: OCC clearing $0.025 + options regulatory fee ~$0.023 + FINRA TAF
+# $0.00329 on sales (SEC fee on option premium is a fraction of a cent).
+DEFAULT_REG_FEES = 0.05
+CONTRACT_MULTIPLIER = 100
+
+
+def ibkr_tiered_commission(premium: float) -> float:
+    """IBKR Pro Tiered, US options, ≤10,000 contracts/month, before exchange fees.
+
+    $0.65 per contract at a premium of $0.10+, $0.50 from $0.05 to $0.10, $0.25 below
+    $0.05 — so a nickel buyback costs $0.50 and a sub-nickel combo leg $0.25.
+    """
+    if premium >= 0.10:
+        return 0.65
+    if premium >= 0.05:
+        return 0.50
+    return 0.25
 
 # Where the cap breaks, how far above the strike might STRC settle? These are scenario
 # sizes, not forecasts: the issuer can still cut the rate, and ATM supply returns.
@@ -490,14 +508,23 @@ def pinned_par_ranking(
     par: float = STATED_AMOUNT,
     rate: float = DEFAULT_STRC_RATE,
     buyback: float = PINNED_BUYBACK,
+    commission: float | None = None,
+    reg_fees: float = DEFAULT_REG_FEES,
 ) -> list[dict[str, Any]]:
     """Covered calls ranked by premium per year if STRC trades at par and never above it.
 
     No forward drift: the dividend is assumed not to pull the price below par, so a strike
     under par is always called and is excluded. A strike *at* par is only exposed in expiry
     week (Thursday exercise for Friday's ex-date, or a ≥$0.01 ITM close on Friday), so its
-    ``net`` figures assume it is bought back for one tick then.
+    ``net`` figures assume it is bought back for ``buyback`` then, and charge commission +
+    regulatory fees per contract on each leg traded (one leg if it is left to expire).
+    ``commission`` is a flat per-contract rate; None uses IBKR Tiered by leg premium.
     """
+
+    def leg(premium: float) -> float:  # per share
+        c = ibkr_tiered_commission(premium) if commission is None else commission
+        return (c + reg_fees) / CONTRACT_MULTIPLIER
+
     div_yield = rate * par / spot
     out: list[dict[str, Any]] = []
     for c in contracts:
@@ -510,7 +537,8 @@ def pinned_par_ranking(
         if days <= 0 or not bid:
             continue
         mid = 0.5 * (bid + ask) if ask else bid
-        cost = buyback if abs(k - par) < 1e-9 else 0.0
+        at_par = abs(k - par) < 1e-9
+        cost = (leg(bid) + buyback + leg(buyback)) if at_par else leg(bid)
         years = days / 365.0
         net_bid = max(bid - cost, 0.0) / spot / years
         out.append(
@@ -526,8 +554,10 @@ def pinned_par_ranking(
                 "premium_yr_mid": mid / spot / years,
                 "net_yr_bid": net_bid,
                 "net_yr_mid": max(mid - cost, 0.0) / spot / years,
+                "cost_per_contract": cost * CONTRACT_MULTIPLIER,
+                "net_per_contract_bid": (bid - cost) * CONTRACT_MULTIPLIER,
                 "total_yr_bid": div_yield + net_bid,
-                "assignment_window": "expiry week, only on a print above par" if cost else "none unless the cap breaks",
+                "assignment_window": "expiry week, only on a print above par" if at_par else "none unless the cap breaks",
             }
         )
     out.sort(key=lambda r: r["net_yr_bid"], reverse=True)
@@ -941,6 +971,9 @@ def run(
     rate: float = DEFAULT_STRC_RATE,
     force_refresh: bool = False,
     mc_paths: int = 20_000,
+    commission: float | None = None,
+    reg_fees: float = DEFAULT_REG_FEES,
+    buyback: float = PINNED_BUYBACK,
 ) -> dict[str, Any]:
     from preferred_valuation import live_yield_curve
 
@@ -1022,7 +1055,9 @@ def run(
     ]
 
     next_ex = ladder[:10]
-    pinned = pinned_par_ranking(chain["contracts"], spot, today, rate=rate)
+    pinned = pinned_par_ranking(
+        chain["contracts"], spot, today, rate=rate, buyback=buyback, commission=commission, reg_fees=reg_fees
+    )
     return {
         "ticker": ticker,
         "strike": strike,
@@ -1034,6 +1069,11 @@ def run(
         "iv30": chain.get("iv30"),
         "front_iv": front_iv,
         "strc_rate_assumed": rate,
+        "fees": {
+            "commission_per_contract_leg": "ibkr-tiered" if commission is None else commission,
+            "reg_fees_per_contract_leg": reg_fees,
+            "buyback": buyback,
+        },
         "curve_as_of": getattr(curve, "as_of_date", None),
         "dividend_ladder_head": [
             {"ex_date": e.ex_date.isoformat(), "amount": round(e.amount, 6), "record_dates": [d.isoformat() for d in e.record_dates], "declared": e.declared}
@@ -1122,20 +1162,25 @@ def print_report(out: dict[str, Any]) -> None:
         print(f"{x['expiry']:<11}{cells}{_fmt(x['naked_return_on_margin_annual'] and 100 * x['naked_return_on_margin_annual'], '.2f'):>14}")
 
 
-def print_pinned(out: dict[str, Any], limit: int = 8) -> None:
+def print_pinned(out: dict[str, Any], limit: int = 8, contracts: int = 1) -> None:
     rows = out.get("pinned_par") or []
     if not rows:
         return
     div = out["strc_rate_assumed"] * STATED_AMOUNT / out["spot"]
+    fees = out.get("fees") or {}
+    comm = fees.get("commission_per_contract_leg")
+    comm_txt = "IBKR Tiered commission" if comm == "ibkr-tiered" else f"${comm:.2f} commission"
     print(f"\nIf STRC stays pinned at $100 (no dividend drift, never above par) — calls that are never "
-          f"in the money, by premium/yr.\n  'net' closes a $100 strike for ${PINNED_BUYBACK:.2f} in expiry week; "
-          f"total = net + {100 * div:.2f}% dividend on spot.")
+          f"in the money, by premium/yr.\n  'net' = bid − ${fees.get('buyback', PINNED_BUYBACK):.2f} expiry-week buyback "
+          f"(par strike) − {comm_txt} − ${fees.get('reg_fees_per_contract_leg', 0):.2f} clearing/reg fees per leg; "
+          f"total = net + {100 * div:.2f}% dividend on spot.  $ columns for {contracts} contract(s).")
     print(f"{'expiry':<11}{'strike':>7}{'days':>6}{'bid':>7}{'ask':>7}{'OI':>7}"
-          f"{'bid/yr':>8}{'mid/yr':>8}{'net/yr':>8}{'total/yr':>10}  assignment window")
+          f"{'bid/yr':>8}{'mid/yr':>8}{'cost$':>9}{'net$':>10}{'net/yr':>8}{'total/yr':>10}  assignment window")
     for r in rows[:limit]:
         print(
             f"{r['expiry']:<11}{r['strike']:>7g}{r['days']:>6}{r['bid']:>7.2f}{_fmt(r['ask'], '.2f'):>7}"
             f"{_fmt(r['open_interest'], '.0f'):>7}{100 * r['premium_yr_bid']:>8.2f}{100 * r['premium_yr_mid']:>8.2f}"
+            f"{contracts * r['cost_per_contract']:>9,.0f}{contracts * r['net_per_contract_bid']:>10,.0f}"
             f"{100 * r['net_yr_bid']:>8.2f}{100 * r['total_yr_bid']:>10.2f}  {r['assignment_window']}"
         )
 
@@ -1147,15 +1192,23 @@ def main() -> None:
     p.add_argument("--rate", type=float, default=DEFAULT_STRC_RATE,
                    help="STRC annual rate on $100 for record dates after the declared month")
     p.add_argument("--mc-paths", type=int, default=20_000)
+    p.add_argument("--commission", type=float, default=None,
+                   help="Flat commission per option contract per leg (default: IBKR Tiered by premium)")
+    p.add_argument("--buyback", type=float, default=PINNED_BUYBACK,
+                   help="Expiry-week buy-to-close price for a par strike (0.01-0.04 via a combo roll)")
+    p.add_argument("--contracts", type=int, default=1, help="Position size for the $ columns")
+    p.add_argument("--reg-fees", type=float, default=DEFAULT_REG_FEES,
+                   help="Exchange ORF + FINRA TAF + SEC fee per contract per leg")
     p.add_argument("--force-refresh", action="store_true")
     p.add_argument("--output", type=Path, default=OUTPUT_DIR / "strc_call_writer.json")
     args = p.parse_args()
 
     ensure_output_dirs()
     out = run(ticker=args.ticker.upper(), strike=args.strike, rate=args.rate,
-              force_refresh=args.force_refresh, mc_paths=args.mc_paths)
+              force_refresh=args.force_refresh, mc_paths=args.mc_paths,
+              commission=args.commission, reg_fees=args.reg_fees, buyback=args.buyback)
     print_report(out)
-    print_pinned(out)
+    print_pinned(out, contracts=args.contracts)
     args.output.write_text(json.dumps(out, indent=2, default=str))
     print(f"\nWrote {args.output}")
 

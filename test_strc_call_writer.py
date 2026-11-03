@@ -162,7 +162,7 @@ def test_pinned_par_ranking_excludes_itm_strikes_and_charges_buyback_only_at_par
         {"type": "P", "expiry": mar, "strike": 100.0, "bid": 1.90, "ask": 6.60},
         {"type": "C", "expiry": jun, "strike": 105.0, "bid": None, "ask": 0.40},  # no bid
     ]
-    rows = w.pinned_par_ranking(contracts, 99.78, today, rate=0.12)
+    rows = w.pinned_par_ranking(contracts, 99.78, today, rate=0.12, commission=0.0, reg_fees=0.0)
     assert [(r["expiry"], r["strike"]) for r in rows] == [
         ("2027-03-19", 100.0), ("2027-06-17", 100.0), ("2027-03-19", 105.0)
     ]
@@ -171,3 +171,31 @@ def test_pinned_par_ranking_excludes_itm_strikes_and_charges_buyback_only_at_par
     assert mar100["net_yr_bid"] == pytest.approx((0.45 - 0.05) / 99.78 / years)
     assert mar100["total_yr_bid"] == pytest.approx(12.0 / 99.78 + mar100["net_yr_bid"])
     assert rows[2]["net_yr_bid"] == pytest.approx(rows[2]["premium_yr_bid"])  # no buyback above par
+
+
+def test_pinned_par_ranking_charges_two_legs_at_par_and_one_above():
+    today = date(2026, 11, 3)
+    mar = date(2027, 3, 19)
+    contracts = [
+        {"type": "C", "expiry": mar, "strike": 100.0, "bid": 0.45, "ask": 0.55},
+        {"type": "C", "expiry": mar, "strike": 105.0, "bid": 0.05, "ask": 0.20},
+    ]
+    rows = {r["strike"]: r for r in w.pinned_par_ranking(contracts, 99.78, today, commission=0.65, reg_fees=0.03)}
+    # Par strike: sell + buy back at $0.05, commission and fees on both legs.
+    assert rows[100.0]["cost_per_contract"] == pytest.approx(5.00 + 2 * 0.68)
+    assert rows[100.0]["net_per_contract_bid"] == pytest.approx(45.0 - 6.36)
+    # Above par: left to expire, so only the opening leg.
+    assert rows[105.0]["cost_per_contract"] == pytest.approx(0.68)
+
+    # IBKR Tiered: $0.65 to sell at $0.45, $0.50 to buy back at a nickel, $0.25 below a nickel.
+    tiered = {r["strike"]: r for r in w.pinned_par_ranking(contracts, 99.78, today, reg_fees=0.05)}
+    assert tiered[100.0]["cost_per_contract"] == pytest.approx(0.70 + 5.00 + 0.55)
+    penny = {r["strike"]: r for r in w.pinned_par_ranking(contracts, 99.78, today, reg_fees=0.05, buyback=0.01)}
+    assert penny[100.0]["cost_per_contract"] == pytest.approx(0.70 + 1.00 + 0.30)
+
+
+def test_ibkr_tiered_commission_steps_down_with_premium():
+    assert w.ibkr_tiered_commission(0.45) == 0.65
+    assert w.ibkr_tiered_commission(0.10) == 0.65
+    assert w.ibkr_tiered_commission(0.05) == 0.50
+    assert w.ibkr_tiered_commission(0.04) == 0.25
