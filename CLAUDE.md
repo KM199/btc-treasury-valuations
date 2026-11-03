@@ -80,6 +80,8 @@ python -m pytest test_ibit_option_deltas_convexity.py::TestIbitOptionDeltasConve
 
 `test_dividend_yield_policy.py` tests the dividend-yield policy in `ibit_option_deltas.py`: that a known payer (STRC) raises `MissingDividendYieldError` rather than silently pricing at q=0, that the stated coupon on $100 par is rescaled onto live spot, the `effective_yield` fallback, that a stale `dividend_yield: 0.0` is re-derived, and that a chain enriched without a trusted `dividend_yield_source` is not counted as enriched. Builds its own JSON fixtures in a temp dir — runs anywhere.
 
+`test_strc_call_writer.py` tests `strc_call_writer.py`: the discrete-dividend American call (matches Black-Scholes with no dividends and the CRR tree's continuous yield with daily cash dividends; a large dividend creates an exercise boundary, a tiny one does not), the T+1 ex-date calendar against the 8-K's November 2026 daily record dates (Friday carries the weekend, Veterans Day and Thanksgiving roll back a day), the declared-then-projected dividend ladder, and the cap-break arithmetic. Builds its own inputs — runs anywhere.
+
 ### Dividend yield for option Greeks
 
 The CRR tree's forward is `S·e^(r−q)T`, so **q is a yield on spot, not a coupon on par**. STRC pays 12% of the **$100 stated amount** in cash, which at $98.67 spot is q = 12.16%. Never let a missing yield fall back to 0 — that overstates STRC put IV by 4–9 vol points. Add new tickers to `NON_DIVIDEND_TICKERS` or `DIVIDEND_PAYING_TICKERS` in `ibit_option_deltas.py`; see [`docs/data-sources.md`](docs/data-sources.md).
@@ -166,6 +168,7 @@ The gate base is `Configuration.coverage_claim_value` = SATA marked at its live 
 | `fetch_yahoo.py` | Shared cached Yahoo Finance helpers (`yahoo_spot_price`, `load_btc_spot`) used across fetch scripts |
 | `mstr_hedge_helpers.py` | Shared helpers for `mstr_options_hedge.ipynb`: theta, hedge sizing, $10k book P&L shocks |
 | `mstr_liquidation.py` | STRC liquidation waterfall math: senior-claim wipeout band and MSTR/STRC put-hedge sizing |
+| `strc_call_writer.py` | Selling STRC calls by expiry: American FD pricer on the actual daily ex-dividend ladder, early-exercise boundary per ex-date, and the premium read against the ~$100 ATM ceiling. `python strc_call_writer.py [--strike 100] [--rate 0.12]` → `output/strc_call_writer.json` |
 | `check_baseline.py` | Utility: verify that the baseline scenario is present in `output/sata_valuation_results.json` |
 | `output/treasury_extracted_data.json` | Runtime configuration source — overrides Configuration defaults when present |
 

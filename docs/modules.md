@@ -33,6 +33,7 @@ Flat repo: one concern per file. Prefer extending these over copying logic into 
 | `mstr_nav.py` | MSTR **rNAV** (residual NAV/share after prefs + converts at market) |
 | `asst_nav.py` | ASST **rNAV** (residual NAV/share after SATA at face/market + debt) |
 | `mstr_hedge_helpers.py` | Theta / put sizing / book P&L for hedge notebook |
+| `strc_call_writer.py` | Short STRC calls by expiry: discrete daily dividends, early exercise, par ceiling |
 | `export_site_data.py` | `market_snapshot.json` + `fair_values.json` for `web/` |
 
 ## Presentation / utilities
