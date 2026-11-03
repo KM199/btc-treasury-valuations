@@ -68,6 +68,10 @@ OBSERVED_MAX_HIGH = 100.4182
 NAKED_CALL_MARGIN_RATE = 0.20
 NAKED_CALL_MARGIN_FLOOR = 0.10
 
+# Closing a par-strike call in expiry week costs at most one $0.05 tick: under the
+# pinned-at-par thesis that is the only window in which it can be assigned.
+PINNED_BUYBACK = 0.05
+
 # Where the cap breaks, how far above the strike might STRC settle? These are scenario
 # sizes, not forecasts: the issuer can still cut the rate, and ATM supply returns.
 CAP_BREAK_JUMPS = (0.5, 1.0, 2.0, 5.0)
@@ -476,6 +480,58 @@ def annual_equivalent_probability(p: float, years: float) -> float:
     if p >= 1:
         return 1.0
     return 1.0 - (1.0 - p) ** (1.0 / years)
+
+
+def pinned_par_ranking(
+    contracts: Iterable[dict[str, Any]],
+    spot: float,
+    today: date,
+    *,
+    par: float = STATED_AMOUNT,
+    rate: float = DEFAULT_STRC_RATE,
+    buyback: float = PINNED_BUYBACK,
+) -> list[dict[str, Any]]:
+    """Covered calls ranked by premium per year if STRC trades at par and never above it.
+
+    No forward drift: the dividend is assumed not to pull the price below par, so a strike
+    under par is always called and is excluded. A strike *at* par is only exposed in expiry
+    week (Thursday exercise for Friday's ex-date, or a ≥$0.01 ITM close on Friday), so its
+    ``net`` figures assume it is bought back for one tick then.
+    """
+    div_yield = rate * par / spot
+    out: list[dict[str, Any]] = []
+    for c in contracts:
+        k = c.get("strike")
+        if c.get("type") != "C" or k is None or k < par - 1e-9:
+            continue
+        days = (c["expiry"] - today).days
+        bid = c["bid"] if c.get("bid") and c["bid"] > 0 else None
+        ask = c["ask"] if c.get("ask") and c["ask"] > 0 else None
+        if days <= 0 or not bid:
+            continue
+        mid = 0.5 * (bid + ask) if ask else bid
+        cost = buyback if abs(k - par) < 1e-9 else 0.0
+        years = days / 365.0
+        net_bid = max(bid - cost, 0.0) / spot / years
+        out.append(
+            {
+                "expiry": c["expiry"].isoformat(),
+                "strike": k,
+                "days": days,
+                "bid": bid,
+                "ask": ask,
+                "mid": mid,
+                "open_interest": c.get("open_interest"),
+                "premium_yr_bid": bid / spot / years,
+                "premium_yr_mid": mid / spot / years,
+                "net_yr_bid": net_bid,
+                "net_yr_mid": max(mid - cost, 0.0) / spot / years,
+                "total_yr_bid": div_yield + net_bid,
+                "assignment_window": "expiry week, only on a print above par" if cost else "none unless the cap breaks",
+            }
+        )
+    out.sort(key=lambda r: r["net_yr_bid"], reverse=True)
+    return out
 
 
 def naked_call_margin(spot: float, strike: float, premium: float) -> float:
@@ -966,6 +1022,7 @@ def run(
     ]
 
     next_ex = ladder[:10]
+    pinned = pinned_par_ranking(chain["contracts"], spot, today, rate=rate)
     return {
         "ticker": ticker,
         "strike": strike,
@@ -984,6 +1041,7 @@ def run(
         ],
         "ceiling": {"all": stats_all, "last_6m": stats_recent, "cap_level_used": cap_level, "cap_value_used": cap_value},
         "expiries": [asdict(x) for x in results],
+        "pinned_par": pinned,
     }
 
 
@@ -1064,6 +1122,24 @@ def print_report(out: dict[str, Any]) -> None:
         print(f"{x['expiry']:<11}{cells}{_fmt(x['naked_return_on_margin_annual'] and 100 * x['naked_return_on_margin_annual'], '.2f'):>14}")
 
 
+def print_pinned(out: dict[str, Any], limit: int = 8) -> None:
+    rows = out.get("pinned_par") or []
+    if not rows:
+        return
+    div = out["strc_rate_assumed"] * STATED_AMOUNT / out["spot"]
+    print(f"\nIf STRC stays pinned at $100 (no dividend drift, never above par) — calls that are never "
+          f"in the money, by premium/yr.\n  'net' closes a $100 strike for ${PINNED_BUYBACK:.2f} in expiry week; "
+          f"total = net + {100 * div:.2f}% dividend on spot.")
+    print(f"{'expiry':<11}{'strike':>7}{'days':>6}{'bid':>7}{'ask':>7}{'OI':>7}"
+          f"{'bid/yr':>8}{'mid/yr':>8}{'net/yr':>8}{'total/yr':>10}  assignment window")
+    for r in rows[:limit]:
+        print(
+            f"{r['expiry']:<11}{r['strike']:>7g}{r['days']:>6}{r['bid']:>7.2f}{_fmt(r['ask'], '.2f'):>7}"
+            f"{_fmt(r['open_interest'], '.0f'):>7}{100 * r['premium_yr_bid']:>8.2f}{100 * r['premium_yr_mid']:>8.2f}"
+            f"{100 * r['net_yr_bid']:>8.2f}{100 * r['total_yr_bid']:>10.2f}  {r['assignment_window']}"
+        )
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--ticker", default="STRC")
@@ -1079,6 +1155,7 @@ def main() -> None:
     out = run(ticker=args.ticker.upper(), strike=args.strike, rate=args.rate,
               force_refresh=args.force_refresh, mc_paths=args.mc_paths)
     print_report(out)
+    print_pinned(out)
     args.output.write_text(json.dumps(out, indent=2, default=str))
     print(f"\nWrote {args.output}")
 

@@ -149,3 +149,25 @@ def test_parse_occ_symbol():
 def test_naked_call_margin():
     # 20% of 99.78 less $0.22 OTM, plus premium.
     assert w.naked_call_margin(99.78, 100.0, 0.45) == pytest.approx(0.2 * 99.78 - 0.22 + 0.45)
+
+
+def test_pinned_par_ranking_excludes_itm_strikes_and_charges_buyback_only_at_par():
+    today = date(2026, 11, 3)
+    mar, jun = date(2027, 3, 19), date(2027, 6, 17)
+    contracts = [
+        {"type": "C", "expiry": mar, "strike": 97.5, "bid": 2.00, "ask": 3.00},  # called at par
+        {"type": "C", "expiry": mar, "strike": 100.0, "bid": 0.45, "ask": 0.55},
+        {"type": "C", "expiry": mar, "strike": 105.0, "bid": 0.05, "ask": 0.20},
+        {"type": "C", "expiry": jun, "strike": 100.0, "bid": 0.60, "ask": 1.20},
+        {"type": "P", "expiry": mar, "strike": 100.0, "bid": 1.90, "ask": 6.60},
+        {"type": "C", "expiry": jun, "strike": 105.0, "bid": None, "ask": 0.40},  # no bid
+    ]
+    rows = w.pinned_par_ranking(contracts, 99.78, today, rate=0.12)
+    assert [(r["expiry"], r["strike"]) for r in rows] == [
+        ("2027-03-19", 100.0), ("2027-06-17", 100.0), ("2027-03-19", 105.0)
+    ]
+    mar100 = rows[0]
+    years = 136 / 365
+    assert mar100["net_yr_bid"] == pytest.approx((0.45 - 0.05) / 99.78 / years)
+    assert mar100["total_yr_bid"] == pytest.approx(12.0 / 99.78 + mar100["net_yr_bid"])
+    assert rows[2]["net_yr_bid"] == pytest.approx(rows[2]["premium_yr_bid"])  # no buyback above par

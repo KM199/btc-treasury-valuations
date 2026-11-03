@@ -80,7 +80,7 @@ python -m pytest test_ibit_option_deltas_convexity.py::TestIbitOptionDeltasConve
 
 `test_dividend_yield_policy.py` tests the dividend-yield policy in `ibit_option_deltas.py`: that a known payer (STRC) raises `MissingDividendYieldError` rather than silently pricing at q=0, that the stated coupon on $100 par is rescaled onto live spot, the `effective_yield` fallback, that a stale `dividend_yield: 0.0` is re-derived, and that a chain enriched without a trusted `dividend_yield_source` is not counted as enriched. Builds its own JSON fixtures in a temp dir — runs anywhere.
 
-`test_strc_call_writer.py` tests `strc_call_writer.py`: the discrete-dividend American call (matches Black-Scholes with no dividends and the CRR tree's continuous yield with daily cash dividends; a large dividend creates an exercise boundary, a tiny one does not), the T+1 ex-date calendar against the 8-K's November 2026 daily record dates (Friday carries the weekend, Veterans Day and Thanksgiving roll back a day), the declared-then-projected dividend ladder, and the cap-break arithmetic. Builds its own inputs — runs anywhere.
+`test_strc_call_writer.py` tests `strc_call_writer.py`: the discrete-dividend American call (matches Black-Scholes with no dividends and the CRR tree's continuous yield with daily cash dividends; a large dividend creates an exercise boundary, a tiny one does not), the T+1 ex-date calendar against the 8-K's November 2026 daily record dates (Friday carries the weekend, Veterans Day and Thanksgiving roll back a day), the declared-then-projected dividend ladder, the cap-break arithmetic, and the pinned-at-par covered-call ranking. Builds its own inputs — runs anywhere.
 
 ### Dividend yield for option Greeks
 
